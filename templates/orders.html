@@ -9,15 +9,13 @@
     <div class="section-header">
         <div>
             <h1>Xaridlarim</h1>
-            <p>Bu yerda barcha xaridlaringiz va to'lov holatlaringiz ko'rsatiladi.</p>
+            <p>Barcha xaridlaringiz va to'lov holatlaringiz shu yerda.</p>
         </div>
     </div>
-
 
     {% if orders %}
 
     <div class="table-wrap">
-
         <table>
 
             <thead>
@@ -27,11 +25,10 @@
                     <th>Narxi</th>
                     <th>Sana</th>
                     <th>To'lov</th>
-                    <th>Order holati</th>
+                    <th>Holat</th>
                     <th>Amal</th>
                 </tr>
             </thead>
-
 
             <tbody>
 
@@ -47,15 +44,12 @@
 
                     <!-- CONFIG -->
                     <td>
-
                         {% if o.config %}
 
-                            <a
-                                href="{{ url_for(
-                                    'configs.config_detail',
-                                    slug=o.config.slug
-                                ) }}"
-                            >
+                            <a href="{{ url_for(
+                                'configs.config_detail',
+                                slug=o.config.slug
+                            ) }}">
                                 {{ o.config.name }}
                             </a>
 
@@ -64,7 +58,6 @@
                             <span>Config o'chirilgan</span>
 
                         {% endif %}
-
                     </td>
 
 
@@ -78,23 +71,15 @@
 
                     <!-- DATE -->
                     <td>
-
                         {% if o.created_at %}
-
-                            {{ o.created_at.strftime(
-                                '%d.%m.%Y %H:%M'
-                            ) }}
-
+                            {{ o.created_at.strftime('%d.%m.%Y %H:%M') }}
                         {% else %}
-
                             —
-
                         {% endif %}
-
                     </td>
 
 
-                    <!-- PAYMENT STATUS -->
+                    <!-- PAYMENT -->
                     <td>
 
                         {% if o.payment %}
@@ -120,7 +105,7 @@
                             {% else %}
 
                                 <span class="badge badge-pending">
-                                    To'lov kutilmoqda
+                                    ⏳ Kutilmoqda
                                 </span>
 
                             {% endif %}
@@ -166,7 +151,7 @@
                         {% elif o.status == 'REJECTED' %}
 
                             <span class="badge badge-rejected">
-                                ✕ REJECTED
+                                ✕ Rad etilgan
                             </span>
 
                         {% elif o.status == 'CANCELLED' %}
@@ -193,13 +178,12 @@
 
                             {% if o.config and o.config.cfg_file_filename %}
 
-                                <a
-                                    href="{{ url_for(
-                                        'orders.download',
-                                        order_id=o.id
-                                    ) }}"
-                                    class="btn btn-sm btn-primary"
-                                >
+                                <!-- MUHIM: orders.download -->
+                                <a href="{{ url_for(
+                                    'orders.download',
+                                    order_id=o.id
+                                ) }}"
+                                class="btn btn-sm btn-primary">
                                     ⬇ Yuklab olish
                                 </a>
 
@@ -218,13 +202,12 @@
                             'REJECTED'
                         ] %}
 
-                            <a
-                                href="{{ url_for(
-                                    'orders.payment',
-                                    order_id=o.id
-                                ) }}"
-                                class="btn btn-sm btn-outline"
-                            >
+                            <!-- Payment endpoint -->
+                            <a href="{{ url_for(
+                                'orders.payment',
+                                order_id=o.id
+                            ) }}"
+                            class="btn btn-sm btn-outline">
                                 💳 To'lov
                             </a>
 
@@ -232,7 +215,7 @@
                         {% elif o.status == 'UNDER_REVIEW' %}
 
                             <span class="badge badge-review">
-                                Tekshirilmoqda
+                                ⏳ Tekshirilmoqda
                             </span>
 
 
@@ -258,7 +241,6 @@
             </tbody>
 
         </table>
-
     </div>
 
 
