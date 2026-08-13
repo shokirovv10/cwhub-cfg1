@@ -18,10 +18,10 @@
       <button class="nav-toggle" aria-label="Menu">☰</button>
 
       <div class="nav-links">
-        <a href="{{ url_for('main.index') }}">Bosh sahifa</a>
-        <a href="{{ url_for('configs.config_list') }}">Configlar</a>
-        <a href="{{ url_for('main.about') }}">Men haqimda</a>
-
+      <a href="{{ url_for('main.index') }}">Bosh sahifa</a>
+<a href="{{ url_for('configs.config_list') }}">Configlar</a>
+<a href="{{ url_for('main.about') }}">Biz haqda</a>
+<a href="{{ url_for('main.support') }}">Support</a>
         {% if current_user.is_authenticated %}
           <a href="{{ url_for('auth.profile') }}">Profil</a>
           <a href="{{ url_for('orders.order_list') }}">Xaridlarim</a>
