@@ -22,6 +22,7 @@ from app.models import (
     Order,
     Payment,
     PaymentReceipt,
+    PaymentSettings,
     Download,
     OrderStatus,
     PaymentStatus,
@@ -61,10 +62,6 @@ def allowed_receipt(filename):
 
 
 def get_upload_folder():
-    """
-    Asosiy uploads papkasi.
-    """
-
     upload_folder = current_app.config.get("UPLOAD_FOLDER")
 
     if not upload_folder:
@@ -79,11 +76,6 @@ def get_upload_folder():
 
 
 def get_config_folder():
-    """
-    CFG fayllari:
-    uploads/configs/
-    """
-
     config_folder = os.path.join(
         get_upload_folder(),
         "configs"
@@ -95,11 +87,6 @@ def get_config_folder():
 
 
 def get_receipt_folder():
-    """
-    Cheklar:
-    uploads/receipts/
-    """
-
     receipt_folder = os.path.join(
         get_upload_folder(),
         "receipts"
@@ -114,7 +101,7 @@ def get_receipt_folder():
 # MY ORDERS
 # ============================================================
 
-@orders_bp.route("/orders")
+@orders_bp.route("/orders", methods=["GET"])
 @login_required
 def order_list():
 
@@ -139,7 +126,7 @@ def order_list():
 # CHECKOUT
 # ============================================================
 
-@orders_bp.route("/checkout/<slug>")
+@orders_bp.route("/checkout/<slug>", methods=["GET"])
 @login_required
 def checkout(slug):
 
@@ -153,13 +140,12 @@ def checkout(slug):
         .first_or_404()
     )
 
-    # Oldin sotib olinganmi?
     existing_paid = (
         Order.query
-        .filter_by(
-            user_id=current_user.id,
-            config_id=config.id,
-            status=OrderStatus.PAID.value
+        .filter(
+            Order.user_id == current_user.id,
+            Order.config_id == config.id,
+            Order.status == OrderStatus.PAID.value
         )
         .first()
     )
@@ -202,9 +188,9 @@ def create_order(slug):
         .first_or_404()
     )
 
-    # ========================================================
+    # --------------------------------------------------------
     # PAID ORDER
-    # ========================================================
+    # --------------------------------------------------------
 
     existing_paid = (
         Order.query
@@ -227,9 +213,9 @@ def create_order(slug):
             url_for("orders.order_list")
         )
 
-    # ========================================================
-    # PENDING ORDER
-    # ========================================================
+    # --------------------------------------------------------
+    # EXISTING PENDING ORDER
+    # --------------------------------------------------------
 
     existing_pending = (
         Order.query
@@ -257,9 +243,9 @@ def create_order(slug):
             )
         )
 
-    # ========================================================
+    # --------------------------------------------------------
     # CREATE ORDER
-    # ========================================================
+    # --------------------------------------------------------
 
     order = Order(
         user_id=current_user.id,
@@ -269,13 +255,11 @@ def create_order(slug):
     )
 
     db.session.add(order)
-
-    # Order ID olish
     db.session.flush()
 
-    # ========================================================
+    # --------------------------------------------------------
     # CREATE PAYMENT
-    # ========================================================
+    # --------------------------------------------------------
 
     payment = Payment(
         order_id=order.id,
@@ -299,7 +283,10 @@ def create_order(slug):
 # PAYMENT PAGE
 # ============================================================
 
-@orders_bp.route("/payment/<int:order_id>")
+@orders_bp.route(
+    "/payment/<int:order_id>",
+    methods=["GET"]
+)
 @login_required
 def payment(order_id):
 
@@ -312,6 +299,10 @@ def payment(order_id):
         .first_or_404()
     )
 
+    # --------------------------------------------------------
+    # ALREADY PAID
+    # --------------------------------------------------------
+
     if order.status == OrderStatus.PAID.value:
 
         flash(
@@ -323,9 +314,12 @@ def payment(order_id):
             url_for("orders.order_list")
         )
 
+    # --------------------------------------------------------
+    # PAYMENT
+    # --------------------------------------------------------
+
     payment = order.payment
 
-    # Payment mavjud bo'lmasa avtomatik yaratish
     if not payment:
 
         payment = Payment(
@@ -337,10 +331,23 @@ def payment(order_id):
         db.session.add(payment)
         db.session.commit()
 
+    # --------------------------------------------------------
+    # PAYMENT SETTINGS
+    # --------------------------------------------------------
+
+    payment_settings = (
+        PaymentSettings.query.first()
+    )
+
+    # --------------------------------------------------------
+    # PAYMENT PAGE
+    # --------------------------------------------------------
+
     return render_template(
         "payment.html",
         order=order,
-        payment=payment
+        payment=payment,
+        payment_settings=payment_settings
     )
 
 
@@ -364,7 +371,10 @@ def upload_receipt(order_id):
         .first_or_404()
     )
 
-    # Paid bo'lsa yana chek yuborish mumkin emas
+    # --------------------------------------------------------
+    # ALREADY PAID
+    # --------------------------------------------------------
+
     if order.status == OrderStatus.PAID.value:
 
         flash(
@@ -376,11 +386,11 @@ def upload_receipt(order_id):
             url_for("orders.order_list")
         )
 
-    file = request.files.get("receipt")
+    # --------------------------------------------------------
+    # FILE
+    # --------------------------------------------------------
 
-    # ========================================================
-    # FILE CHECK
-    # ========================================================
+    file = request.files.get("receipt")
 
     if not file:
 
@@ -424,9 +434,9 @@ def upload_receipt(order_id):
             )
         )
 
-    # ========================================================
+    # --------------------------------------------------------
     # PAYMENT
-    # ========================================================
+    # --------------------------------------------------------
 
     payment = order.payment
 
@@ -441,9 +451,9 @@ def upload_receipt(order_id):
         db.session.add(payment)
         db.session.flush()
 
-    # ========================================================
+    # --------------------------------------------------------
     # OLD RECEIPT
-    # ========================================================
+    # --------------------------------------------------------
 
     old_receipt = payment.receipt
 
@@ -458,6 +468,7 @@ def upload_receipt(order_id):
 
             try:
                 os.remove(old_path)
+
             except OSError:
 
                 current_app.logger.warning(
@@ -468,9 +479,9 @@ def upload_receipt(order_id):
         db.session.delete(old_receipt)
         db.session.flush()
 
-    # ========================================================
-    # SAVE NEW RECEIPT
-    # ========================================================
+    # --------------------------------------------------------
+    # SAVE RECEIPT
+    # --------------------------------------------------------
 
     original_name = secure_filename(
         file.filename
@@ -502,9 +513,9 @@ def upload_receipt(order_id):
 
     file.save(file_path)
 
-    # ========================================================
+    # --------------------------------------------------------
     # DATABASE RECEIPT
-    # ========================================================
+    # --------------------------------------------------------
 
     receipt = PaymentReceipt(
         payment_id=payment.id,
@@ -513,9 +524,9 @@ def upload_receipt(order_id):
 
     db.session.add(receipt)
 
-    # ========================================================
+    # --------------------------------------------------------
     # STATUS
-    # ========================================================
+    # --------------------------------------------------------
 
     payment.status = (
         PaymentStatus.UNDER_REVIEW.value
@@ -542,14 +553,11 @@ def upload_receipt(order_id):
 # ============================================================
 
 @orders_bp.route(
-    "/download/<int:order_id>"
+    "/download/<int:order_id>",
+    methods=["GET"]
 )
 @login_required
 def download(order_id):
-
-    # ========================================================
-    # FIND ORDER
-    # ========================================================
 
     order = (
         Order.query
@@ -564,9 +572,9 @@ def download(order_id):
 
         abort(404)
 
-    # ========================================================
-    # CHECK PAYMENT
-    # ========================================================
+    # --------------------------------------------------------
+    # PAID
+    # --------------------------------------------------------
 
     if order.status != OrderStatus.PAID.value:
 
@@ -579,9 +587,9 @@ def download(order_id):
             url_for("orders.order_list")
         )
 
-    # ========================================================
+    # --------------------------------------------------------
     # CONFIG
-    # ========================================================
+    # --------------------------------------------------------
 
     config = order.config
 
@@ -605,11 +613,6 @@ def download(order_id):
 
     if not filename:
 
-        current_app.logger.error(
-            "Config %s cfg_file_filename mavjud emas.",
-            config.id
-        )
-
         flash(
             "Config fayli mavjud emas.",
             "danger"
@@ -619,9 +622,9 @@ def download(order_id):
             url_for("orders.order_list")
         )
 
-    # ========================================================
+    # --------------------------------------------------------
     # SAFE FILENAME
-    # ========================================================
+    # --------------------------------------------------------
 
     safe_filename = os.path.basename(
         filename
@@ -629,18 +632,7 @@ def download(order_id):
 
     if not safe_filename:
 
-        flash(
-            "Config fayli noto'g'ri.",
-            "danger"
-        )
-
-        return redirect(
-            url_for("orders.order_list")
-        )
-
-    # ========================================================
-    # FILE PATH
-    # ========================================================
+        abort(404)
 
     config_folder = get_config_folder()
 
@@ -655,9 +647,9 @@ def download(order_id):
         config_folder
     )
 
-    # ========================================================
-    # PATH TRAVERSAL PROTECTION
-    # ========================================================
+    # --------------------------------------------------------
+    # PATH TRAVERSAL
+    # --------------------------------------------------------
 
     if not (
         file_path == folder_path
@@ -668,9 +660,9 @@ def download(order_id):
 
         abort(404)
 
-    # ========================================================
+    # --------------------------------------------------------
     # FILE EXISTS
-    # ========================================================
+    # --------------------------------------------------------
 
     if not os.path.isfile(file_path):
 
@@ -688,9 +680,9 @@ def download(order_id):
             url_for("orders.order_list")
         )
 
-    # ========================================================
+    # --------------------------------------------------------
     # DOWNLOAD LOG
-    # ========================================================
+    # --------------------------------------------------------
 
     download_log = Download(
         order_id=order.id,
@@ -702,12 +694,11 @@ def download(order_id):
     )
 
     db.session.add(download_log)
-
     db.session.commit()
 
-    # ========================================================
+    # --------------------------------------------------------
     # DOWNLOAD NAME
-    # ========================================================
+    # --------------------------------------------------------
 
     download_name = secure_filename(
         config.name
@@ -721,9 +712,9 @@ def download(order_id):
 
         download_name += ".cfg"
 
-    # ========================================================
+    # --------------------------------------------------------
     # SEND FILE
-    # ========================================================
+    # --------------------------------------------------------
 
     return send_from_directory(
         config_folder,
@@ -753,10 +744,6 @@ def cancel_order(order_id):
         .first_or_404()
     )
 
-    # ========================================================
-    # PAID / UNDER REVIEW
-    # ========================================================
-
     if order.status in [
         OrderStatus.PAID.value,
         OrderStatus.UNDER_REVIEW.value,
@@ -770,10 +757,6 @@ def cancel_order(order_id):
         return redirect(
             url_for("orders.order_list")
         )
-
-    # ========================================================
-    # CANCEL
-    # ========================================================
 
     order.status = (
         OrderStatus.CANCELLED.value
