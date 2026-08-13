@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Support - CwHUB CFG</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: #0f1117;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        .chat {
+            background: #181b24;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 400px;
+        }
+
+        .message {
+            margin: 12px 0;
+            padding: 12px 16px;
+            border-radius: 10px;
+            max-width: 70%;
+        }
+
+        .user {
+            background: #2563eb;
+            margin-left: auto;
+        }
+
+        .admin {
+            background: #272b36;
+            margin-right: auto;
+        }
+
+        form {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        textarea {
+            flex: 1;
+            resize: none;
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #181b24;
+            color: white;
+        }
+
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 0 25px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Support</h1>
+
+    <div class="chat">
+
+        {% if messages %}
+
+            {% for msg in messages %}
+
+                <div class="message
+                    {% if msg.is_from_admin %}
+                        admin
+                    {% else %}
+                        user
+                    {% endif %}
+                ">
+
+                    <div>
+                        {{ msg.message }}
+                    </div>
+
+                    <small>
+                        {{ msg.created_at.strftime("%d.%m.%Y %H:%M") }}
+                    </small>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <p>Hozircha xabarlar yo'q.</p>
+
+        {% endif %}
+
+    </div>
+
+    <form method="POST">
+
+        <textarea
+            name="message"
+            rows="3"
+            placeholder="Xabaringizni yozing..."
+            required
+        ></textarea>
+
+        <button type="submit">
+            Yuborish
+        </button>
+
+    </form>
+
+</div>
+
+</body>
+</html>

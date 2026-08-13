@@ -1,37 +1,257 @@
 {% extends "admin/layout.html" %}
+
 {% block admin_title %}Users{% endblock %}
 
 {% block admin_content %}
+
 <h1>Foydalanuvchilar</h1>
 
 <form method="get" class="filters-bar">
-  <input type="text" name="q" value="{{ q }}" placeholder="Username yoki email bo'yicha qidirish..." class="search-input">
-  <button type="submit" class="btn btn-primary">Qidirish</button>
+    <input
+        type="text"
+        name="q"
+        value="{{ q }}"
+        placeholder="Username yoki email bo'yicha qidirish..."
+        class="search-input"
+    >
+
+    <button type="submit" class="btn btn-primary">
+        Qidirish
+    </button>
 </form>
 
 <div class="table-wrap">
-  <table>
-    <thead><tr><th>Username</th><th>Email</th><th>Ro'yxatdan o'tgan sana</th><th>Holat</th><th></th></tr></thead>
-    <tbody>
-      {% for u in users %}
-      <tr>
-        <td><a href="{{ url_for('admin.user_detail', user_id=u.id) }}">{{ u.username }}</a>{% if u.is_admin %} <span class="badge badge-review">admin</span>{% endif %}</td>
-        <td>{{ u.email }}</td>
-        <td>{{ u.created_at.strftime('%d.%m.%Y') }}</td>
-        <td>{% if u.is_blocked %}<span class="badge badge-rejected">Bloklangan</span>{% else %}<span class="badge badge-paid">Faol</span>{% endif %}</td>
-        <td>
-          {% if not u.is_admin %}
-          <form method="post" action="{{ url_for('admin.user_toggle_block', user_id=u.id) }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-outline">{{ 'Unblock' if u.is_blocked else 'Block' }}</button>
-          </form>
-          {% endif %}
-        </td>
-      </tr>
-      {% else %}
-      <tr><td colspan="5">Foydalanuvchilar topilmadi.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+    <table>
+
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Ro'yxatdan o'tgan sana</th>
+                <th>Holat</th>
+                <th>Amallar</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for u in users %}
+
+            <tr>
+
+                <!-- USERNAME -->
+                <td>
+                    <a href="{{ url_for('admin.user_detail', user_id=u.id) }}">
+                        {{ u.username }}
+                    </a>
+
+                    {% if u.is_admin %}
+
+                        {% if u.admin_profile and u.admin_profile.is_super_admin %}
+
+                            <span class="badge badge-review">
+                                Super Admin
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge badge-review">
+                                Admin
+                            </span>
+
+                        {% endif %}
+
+                    {% endif %}
+                </td>
+
+
+                <!-- EMAIL -->
+                <td>
+                    {{ u.email }}
+                </td>
+
+
+                <!-- REGISTER DATE -->
+                <td>
+                    {{ u.created_at.strftime('%d.%m.%Y') }}
+                </td>
+
+
+                <!-- STATUS -->
+                <td>
+
+                    {% if u.is_blocked %}
+
+                        <span class="badge badge-rejected">
+                            Bloklangan
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge badge-paid">
+                            Faol
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+
+                <!-- ACTIONS -->
+                <td>
+
+                    {% if not u.is_admin %}
+
+                        <!-- ADMIN QILISH -->
+                        <form
+                            method="post"
+                            action="{{ url_for('admin.make_admin', user_id=u.id) }}"
+                            style="display:inline;"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-primary"
+                            >
+                                Admin qilish
+                            </button>
+
+                        </form>
+
+
+                        <!-- BLOCK / UNBLOCK -->
+                        <form
+                            method="post"
+                            action="{{ url_for('admin.user_toggle_block', user_id=u.id) }}"
+                            style="display:inline;"
+                        >
+
+                            <input
+                                type="hidden"
+                                name="csrf_token"
+                                value="{{ csrf_token() }}"
+                            >
+
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-outline"
+                            >
+                                {{ 'Unblock' if u.is_blocked else 'Block' }}
+                            </button>
+
+                        </form>
+
+                    {% else %}
+
+                        <!-- ADMINNI OLIB TASHLASH -->
+                        {% if u.id != current_user.id %}
+
+                            <form
+                                method="post"
+                                action="{{ url_for('admin.remove_admin', user_id=u.id) }}"
+                                style="display:inline;"
+                            >
+
+                                <input
+                                    type="hidden"
+                                    name="csrf_token"
+                                    value="{{ csrf_token() }}"
+                                >
+
+                                <button
+                                    type="submit"
+                                    class="btn btn-sm btn-outline"
+                                >
+                                    Adminni olish
+                                </button>
+
+                            </form>
+
+
+                            <!-- SUPER ADMIN -->
+                            {% if u.admin_profile and u.admin_profile.is_super_admin %}
+
+                                <form
+                                    method="post"
+                                    action="{{ url_for('admin.remove_super_admin', user_id=u.id) }}"
+                                    style="display:inline;"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-outline"
+                                    >
+                                        Super Adminni olish
+                                    </button>
+
+                                </form>
+
+                            {% else %}
+
+                                <form
+                                    method="post"
+                                    action="{{ url_for('admin.make_super_admin', user_id=u.id) }}"
+                                    style="display:inline;"
+                                >
+
+                                    <input
+                                        type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        class="btn btn-sm btn-primary"
+                                    >
+                                        Super Admin qilish
+                                    </button>
+
+                                </form>
+
+                            {% endif %}
+
+                        {% else %}
+
+                            <span class="badge badge-review">
+                                Siz
+                            </span>
+
+                        {% endif %}
+
+                    {% endif %}
+
+                </td>
+
+            </tr>
+
+        {% else %}
+
+            <tr>
+                <td colspan="5">
+                    Foydalanuvchilar topilmadi.
+                </td>
+            </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
 </div>
+
 {% endblock %}

@@ -89,7 +89,7 @@ def order_detail(order_id):
 
 @orders_bp.route("/orders/<int:order_id>/download")
 @login_required
-@limiter.limit("20 per hour")
+@limiter.limit("999 per hour")
 def download_config(order_id):
     """Himoyalangan yuklab olish: login, order egaligi va PAID statusi tekshiriladi."""
     order = Order.query.get_or_404(order_id)

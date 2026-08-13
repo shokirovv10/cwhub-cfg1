@@ -45,7 +45,7 @@ with app.app_context():
     # --- Payment settings (singleton) ---
     if not PaymentSettings.query.first():
         db.session.add(PaymentSettings(
-            uzcard_number=AppConfig.DEFAULT_UZCARD_NUMBER,
+            uzcard_number=AppConfig.DEFAULT_VISA_NUMBER,
             humo_number=AppConfig.DEFAULT_HUMO_NUMBER,
             card_owner=AppConfig.DEFAULT_CARD_OWNER,
             payment_instructions="To'lovni amalga oshirgach, chekni saytga yuklang. Admin 24 soat ichida tekshiradi.",

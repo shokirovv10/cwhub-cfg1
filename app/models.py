@@ -225,3 +225,49 @@ class SiteSettings(db.Model):
     contact_email = db.Column(db.String(120), default="")
     maintenance_mode = db.Column(db.Boolean, default=False)
     updated_at = db.Column(db.DateTime, default=now_utc, onupdate=now_utc)
+
+# ---------------------------------------------------------------------------
+# SUPPORT CHAT
+# ---------------------------------------------------------------------------
+
+class SupportMessage(db.Model):
+    __tablename__ = "support_messages"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    message = db.Column(
+        db.Text,
+        nullable=False
+    )
+
+    is_from_admin = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    is_read = db.Column(
+        db.Boolean,
+        default=False,
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=now_utc,
+        nullable=False
+    )
+
+    user = db.relationship(
+        "User",
+        backref=db.backref(
+            "support_messages",
+            lazy="dynamic"
+        )
+    )
