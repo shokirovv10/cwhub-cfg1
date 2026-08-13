@@ -1,0 +1,40 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}User: {{ user.username }}{% endblock %}
+
+{% block admin_content %}
+<h1>{{ user.username }}</h1>
+
+<table style="max-width:520px; margin-bottom:24px;">
+  <tr><th>Email</th><td>{{ user.email }}</td></tr>
+  <tr><th>Ro'yxatdan o'tgan sana</th><td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</td></tr>
+  <tr><th>Holat</th><td>{% if user.is_blocked %}<span class="badge badge-rejected">Bloklangan</span>{% else %}<span class="badge badge-paid">Faol</span>{% endif %}</td></tr>
+  <tr><th>Xaridlar soni</th><td>{{ user.orders.filter_by(status='PAID').count() }}</td></tr>
+</table>
+
+{% if not user.is_admin %}
+<form method="post" action="{{ url_for('admin.user_toggle_block', user_id=user.id) }}" style="margin-bottom:26px;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <button type="submit" class="btn btn-outline">{{ 'Unblock qilish' if user.is_blocked else 'Block qilish' }}</button>
+</form>
+{% endif %}
+
+<h2>Xaridlar tarixi</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Order ID</th><th>Config</th><th>Amount</th><th>Sana</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>#{{ o.id }}</td>
+        <td>{{ o.config.name }}</td>
+        <td>{{ "%.0f"|format(o.amount) }}</td>
+        <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
+        <td><span class="badge badge-{{ 'paid' if o.status == 'PAID' else 'review' if o.status == 'UNDER_REVIEW' else 'rejected' if o.status in ['REJECTED','CANCELLED'] else 'pending' }}">{{ o.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5">Xaridlar yo'q.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

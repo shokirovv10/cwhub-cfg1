@@ -1,0 +1,38 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}Categories{% endblock %}
+
+{% block admin_content %}
+<h1>Kategoriyalar</h1>
+
+<form method="post" class="card" style="padding:20px; display:flex; gap:12px; align-items:flex-end; margin-bottom:24px; max-width:480px;">
+  {{ form.hidden_tag() }}
+  <div class="form-group" style="flex:1; margin-bottom:0;">
+    <label>{{ form.name.label }}</label>
+    {{ form.name(placeholder="Kategoriya nomi") }}
+  </div>
+  <button type="submit" class="btn btn-primary">Qo'shish</button>
+</form>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Nomi</th><th>Slug</th><th>Configlar soni</th><th></th></tr></thead>
+    <tbody>
+      {% for cat in categories %}
+      <tr>
+        <td>{{ cat.name }}</td>
+        <td>{{ cat.slug }}</td>
+        <td>{{ cat.configs.count() }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin.category_delete', cat_id=cat.id) }}" onsubmit="return confirmSubmit(this, 'Kategoriyani o\'chirmoqchimisiz?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Kategoriyalar yo'q.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

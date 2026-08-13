@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Order #{{ order.id }}{% endblock %}
+
+{% block content %}
+<div class="card form-wide">
+  <h1>Order #{{ order.id }}</h1>
+
+  <table>
+    <tr><th>Config</th><td>{{ order.config.name }}</td></tr>
+    <tr><th>Narxi</th><td>{{ "%.0f"|format(order.amount) }} so'm</td></tr>
+    <tr><th>Sana</th><td>{{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</td></tr>
+    <tr><th>Holat</th><td><span class="badge badge-{{ 'paid' if order.status == 'PAID' else 'review' if order.status == 'UNDER_REVIEW' else 'rejected' if order.status in ['REJECTED','CANCELLED'] else 'pending' }}">{{ order.status }}</span></td></tr>
+    {% if order.status == 'REJECTED' and order.rejection_reason %}
+    <tr><th>Rad etish sababi</th><td>{{ order.rejection_reason }}</td></tr>
+    {% endif %}
+  </table>
+
+  <div style="margin-top:20px;">
+    {% if order.status == 'PAID' %}
+      <a href="{{ url_for('orders.download_config', order_id=order.id) }}" class="btn btn-primary">Yuklab olish</a>
+    {% elif order.status in ['AWAITING_RECEIPT', 'PENDING_PAYMENT', 'REJECTED'] %}
+      <a href="{{ url_for('orders.checkout_payment', order_id=order.id) }}" class="btn btn-outline">To'lov sahifasiga o'tish</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

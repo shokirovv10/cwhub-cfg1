@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#16191f"/>
+      <stop offset="100%" stop-color="#0c0e11"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#g)"/>
+  <text x="50%" y="48%" text-anchor="middle" fill="#8a919c" font-family="Arial" font-size="26" font-weight="700">CwHUB CFG</text>
+  <text x="50%" y="58%" text-anchor="middle" fill="#e0332f" font-family="Arial" font-size="14">Screenshot mavjud emas</text>
+</svg>

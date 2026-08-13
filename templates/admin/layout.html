@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Admin — {% block admin_title %}Dashboard{% endblock %}{% endblock %}
+
+{% block content %}
+<div class="container admin-layout">
+  <aside class="admin-sidebar">
+    <a href="{{ url_for('admin.dashboard') }}" class="{{ 'active' if request.endpoint == 'admin.dashboard' }}">📊 Dashboard</a>
+    <a href="{{ url_for('admin.config_list') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.config_') }}">🎮 Configs</a>
+    <a href="{{ url_for('admin.categories') }}" class="{{ 'active' if request.endpoint and 'categor' in request.endpoint }}">🏷️ Categories</a>
+    <a href="{{ url_for('admin.users') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.user') }}">👤 Users</a>
+    <a href="{{ url_for('admin.order_list') }}" class="{{ 'active' if request.endpoint == 'admin.order_list' }}">📦 Orders</a>
+    <a href="{{ url_for('admin.payments') }}" class="{{ 'active' if request.endpoint and request.endpoint.startswith('admin.payment_') }}">💳 Payments</a>
+    <a href="{{ url_for('admin.reviews') }}" class="{{ 'active' if request.endpoint and 'review' in request.endpoint }}">⭐ Reviews</a>
+    <a href="{{ url_for('admin.payment_settings') }}" class="{{ 'active' if request.endpoint == 'admin.payment_settings' }}">⚙️ Payment Settings</a>
+    <a href="{{ url_for('admin.site_settings') }}" class="{{ 'active' if request.endpoint == 'admin.site_settings' }}">⚙️ Site Settings</a>
+  </aside>
+
+  <div class="admin-content">
+    {% block admin_content %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}To'lovlarni tekshirish{% endblock %}
+
+{% block admin_content %}
+<h1>To'lovlarni tekshirish</h1>
+<p>Tekshirilishi kerak bo'lgan buyurtmalar: <strong>{{ orders|length }}</strong></p>
+
+{% if orders %}
+<div class="table-wrap" style="margin-bottom:0;">
+  <table>
+    <thead><tr><th>Order ID</th><th>User</th><th>Config</th><th>Amount</th><th>Sana</th><th>Chek</th><th>Amallar</th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>#{{ o.id }}</td>
+        <td>{{ o.user.username }}</td>
+        <td>{{ o.config.name }}</td>
+        <td>{{ "%.0f"|format(o.amount) }} so'm</td>
+        <td>{{ o.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td>
+          {% if o.payment and o.payment.receipt %}
+            <a href="{{ url_for('admin.view_receipt', order_id=o.id) }}" target="_blank" class="btn btn-sm btn-outline">Ko'rish</a>
+          {% else %}—{% endif %}
+        </td>
+        <td style="display:flex; gap:6px; flex-wrap:wrap;">
+          <form method="post" action="{{ url_for('admin.payment_approve', order_id=o.id) }}" onsubmit="return confirmSubmit(this, 'To\'lovni tasdiqlaysizmi?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-success">APPROVE</button>
+          </form>
+          <details>
+            <summary class="btn btn-sm btn-danger" style="cursor:pointer; list-style:none;">REJECT</summary>
+            <form method="post" action="{{ url_for('admin.payment_reject', order_id=o.id) }}" style="margin-top:8px; min-width:220px;">
+              {{ reject_form.hidden_tag() }}
+              <textarea name="reason" placeholder="Rad etish sababi..." style="min-height:60px;"></textarea>
+              <button type="submit" class="btn btn-sm btn-danger btn-block" style="margin-top:6px;">Rad etish</button>
+            </form>
+          </details>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <h3>Tekshirish kerak bo'lgan to'lovlar yo'q</h3>
+  <p>Barcha cheklar ko'rib chiqilgan.</p>
+</div>
+{% endif %}
+{% endblock %}

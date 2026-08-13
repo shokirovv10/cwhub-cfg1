@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}To'lov{% endblock %}
+
+{% block content %}
+<div class="card form-wide">
+  <h1>To'lovni amalga oshiring</h1>
+  <p class="subtitle">Order #{{ order.id }} — {{ "%.0f"|format(order.amount) }} so'm</p>
+
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:18px;">
+    <span class="badge badge-{{ 'pending' if order.status == 'AWAITING_RECEIPT' else 'review' if order.status == 'UNDER_REVIEW' else 'paid' if order.status == 'PAID' else 'rejected' }}">
+      {{ order.status }}
+    </span>
+  </div>
+
+  {% if order.status == 'UNDER_REVIEW' %}
+    <div class="alert alert-info">Chek yuborildi. To'lov admin tomonidan tekshirilmoqda. Iltimos kuting.</div>
+  {% elif order.status == 'REJECTED' %}
+    <div class="alert alert-danger">To'lov rad etildi. {% if order.rejection_reason %}Sabab: {{ order.rejection_reason }}{% endif %}</div>
+  {% endif %}
+
+  {% if order.status == 'AWAITING_RECEIPT' or order.status == 'REJECTED' %}
+  <div class="card" style="padding:20px; margin-bottom:22px; background:var(--bg-alt);">
+    <h3>Karta ma'lumotlari</h3>
+    <table>
+      <tr><th>Uzcard</th><td>{{ settings.uzcard_number if settings else '—' }}</td></tr>
+      <tr><th>Humo</th><td>{{ settings.humo_number if settings else '—' }}</td></tr>
+      <tr><th>Karta egasi</th><td>{{ settings.card_owner if settings else '—' }}</td></tr>
+    </table>
+    {% if settings and settings.payment_instructions %}
+      <p style="margin-top:12px;">{{ settings.payment_instructions }}</p>
+    {% endif %}
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+      <label>{{ form.receipt.label }}</label>
+      {{ form.receipt() }}
+      <span class="file-name-preview" style="font-size:0.8rem; color:var(--text-secondary);"></span>
+      {% for e in form.receipt.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Chekni yuklash → To'lovni yuborish</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

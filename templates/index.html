@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Bosh sahifa{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container">
+    <h1>Cw<span>HUB</span> CFG</h1>
+    <p class="lead">CS 1.6 uchun sifatli va tayyor configlar. Aim, movement, HUD va pro-player sozlamalari — bir joyda.</p>
+    <a href="{{ url_for('configs.config_list') }}" class="btn btn-primary">Configlarni ko'rish</a>
+  </div>
+</section>
+
+{% macro config_grid(items) %}
+<div class="grid">
+  {% for c in items %}
+  <div class="config-card">
+    <a href="{{ url_for('configs.config_detail', slug=c.slug) }}" class="thumb">
+      {% if c.screenshot_filename %}
+        <img src="{{ url_for('main.screenshot', filename=c.screenshot_filename) }}" alt="{{ c.name }}">
+      {% else %}
+        <img src="{{ url_for('static', filename='images/placeholder.svg') }}" alt="{{ c.name }}">
+      {% endif %}
+    </a>
+    <div class="body">
+      <span class="cat-tag">{{ c.category.name }}</span>
+      <h3><a href="{{ url_for('configs.config_detail', slug=c.slug) }}">{{ c.name }}</a></h3>
+      <div class="meta">
+        <span>by {{ c.author }}</span>
+        <span class="rating">★ {{ c.average_rating }} ({{ c.review_count }})</span>
+      </div>
+      <div class="meta"><span>{{ c.sales_count }} ta sotilgan</span></div>
+      <div class="price-row">
+        <span class="price">{{ "%.0f"|format(c.price) }} so'm</span>
+      </div>
+      <div class="actions">
+        <a href="{{ url_for('configs.config_detail', slug=c.slug) }}" class="btn btn-secondary">Batafsil</a>
+        <a href="{{ url_for('orders.checkout', slug=c.slug) }}" class="btn btn-primary">Sotib olish</a>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p>Hozircha configlar mavjud emas.</p>
+  {% endfor %}
+</div>
+{% endmacro %}
+
+<section class="section container">
+  <div class="section-header">
+    <h2>Eng yangi configlar</h2>
+    <a href="{{ url_for('configs.config_list', sort='newest') }}">Barchasi →</a>
+  </div>
+  {{ config_grid(latest) }}
+</section>
+
+<section class="section container">
+  <div class="section-header">
+    <h2>Eng ko'p sotilgan configlar</h2>
+    <a href="{{ url_for('configs.config_list', sort='bestselling') }}">Barchasi →</a>
+  </div>
+  {{ config_grid(top_sellers) }}
+</section>
+
+<section class="section container">
+  <div class="section-header">
+    <h2>Premium configlar</h2>
+    <a href="{{ url_for('configs.config_list', sort='price_desc') }}">Barchasi →</a>
+  </div>
+  {{ config_grid(premium) }}
+</section>
+
+<section class="section container">
+  <div class="section-header">
+    <h2>Kategoriyalar</h2>
+  </div>
+  <div class="categories-strip">
+    {% for cat in categories %}
+      <a href="{{ url_for('configs.config_list', category=cat.id) }}">{{ cat.name }}</a>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

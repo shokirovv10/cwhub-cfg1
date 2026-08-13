@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Profil{% endblock %}
+
+{% block content %}
+<div class="section container" style="max-width:640px;">
+  <div class="profile-header">
+    {% if current_user.avatar_filename %}
+      <img src="{{ url_for('main.avatar', filename=current_user.avatar_filename) }}" class="avatar" alt="avatar">
+    {% else %}
+      <img src="{{ url_for('static', filename='images/avatar-placeholder.svg') }}" class="avatar" alt="avatar">
+    {% endif %}
+    <div>
+      <h1 style="margin-bottom:2px;">{{ current_user.username }}</h1>
+      <p style="margin:0;">{{ current_user.email }}</p>
+      <p style="margin:0; font-size:0.85rem;">A'zo bo'lgan sana: {{ current_user.created_at.strftime('%d.%m.%Y') }}</p>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="num">{{ purchases_count }}</div>
+      <div class="label">Sotib olingan configlar</div>
+    </div>
+    <div class="stat-box">
+      <div class="num">{{ current_user.orders.count() }}</div>
+      <div class="label">Jami buyurtmalar</div>
+    </div>
+  </div>
+
+  <div class="card" style="padding:24px; margin-bottom:20px;">
+    <h2>Profilni tahrirlash</h2>
+    <form method="post" action="{{ url_for('auth.profile') }}" enctype="multipart/form-data">
+      {{ form.hidden_tag() }}
+      <div class="form-group">
+        <label>{{ form.username.label }}</label>
+        {{ form.username() }}
+        {% for e in form.username.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+      </div>
+      <div class="form-group">
+        <label>{{ form.avatar.label }}</label>
+        {{ form.avatar() }}
+        {% for e in form.avatar.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+      </div>
+      <button type="submit" class="btn btn-primary">Saqlash</button>
+    </form>
+  </div>
+
+  <div class="card" style="padding:24px;">
+    <h2>Parolni o'zgartirish</h2>
+    <form method="post" action="{{ url_for('auth.change_password') }}">
+      {{ pw_form.hidden_tag() }}
+      <div class="form-group">
+        <label>{{ pw_form.current_password.label }}</label>
+        {{ pw_form.current_password() }}
+      </div>
+      <div class="form-group">
+        <label>{{ pw_form.new_password.label }}</label>
+        {{ pw_form.new_password() }}
+      </div>
+      <div class="form-group">
+        <label>{{ pw_form.confirm_new_password.label }}</label>
+        {{ pw_form.confirm_new_password() }}
+      </div>
+      <button type="submit" class="btn btn-secondary">Parolni yangilash</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

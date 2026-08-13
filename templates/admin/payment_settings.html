@@ -1,0 +1,45 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}Payment Settings{% endblock %}
+
+{% block admin_content %}
+<h1>To'lov sozlamalari</h1>
+
+<form method="post" class="card" style="padding:26px; max-width:560px;">
+  {{ form.hidden_tag() }}
+
+  <div class="form-group">
+    <label>{{ form.uzcard_number.label }}</label>
+    {{ form.uzcard_number(placeholder="8600 0000 0000 0000") }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.humo_number.label }}</label>
+    {{ form.humo_number(placeholder="9860 0000 0000 0000") }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.card_owner.label }}</label>
+    {{ form.card_owner() }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.payment_instructions.label }}</label>
+    {{ form.payment_instructions() }}
+  </div>
+
+  <hr style="border-color:var(--border); margin:22px 0;">
+  <p style="margin-bottom:14px;"><strong>Kelajakdagi avtomatik payment providerlar</strong> — hozircha faqat manual chek tizimi ishlaydi, quyidagilar Click/Payme API ulanganda ishga tushadi.</p>
+
+  <div class="form-group checkbox-row">
+    {{ form.click_enabled() }}<label style="margin:0;">{{ form.click_enabled.label }}</label>
+  </div>
+  <div class="form-group checkbox-row">
+    {{ form.payme_enabled() }}<label style="margin:0;">{{ form.payme_enabled.label }}</label>
+  </div>
+  <div class="form-group checkbox-row">
+    {{ form.payment_api_enabled() }}<label style="margin:0;">{{ form.payment_api_enabled.label }}</label>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Saqlash</button>
+</form>
+{% endblock %}

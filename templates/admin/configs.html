@@ -1,0 +1,43 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}Configs{% endblock %}
+
+{% block admin_content %}
+<div class="admin-toolbar">
+  <h1>Configs</h1>
+  <a href="{{ url_for('admin.config_new') }}" class="btn btn-primary">+ Yangi config</a>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>Nomi</th><th>Kategoriya</th><th>Narx</th><th>Sotuvlar</th><th>Holat</th><th></th></tr></thead>
+    <tbody>
+      {% for c in configs %}
+      <tr>
+        <td><a href="{{ url_for('configs.config_detail', slug=c.slug) }}" target="_blank">{{ c.name }}</a></td>
+        <td>{{ c.category.name }}</td>
+        <td>{{ "%.0f"|format(c.price) }} so'm</td>
+        <td>{{ c.sales_count }}</td>
+        <td>
+          {% if not c.is_active %}<span class="badge badge-rejected">Nofaol</span>{% endif %}
+          {% if c.is_hidden %}<span class="badge badge-pending">Yashirin</span>{% endif %}
+          {% if c.is_active and not c.is_hidden %}<span class="badge badge-paid">Faol</span>{% endif %}
+        </td>
+        <td style="display:flex; gap:6px;">
+          <a href="{{ url_for('admin.config_edit', config_id=c.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+          <form method="post" action="{{ url_for('admin.config_toggle_hide', config_id=c.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline">{{ 'Show' if c.is_hidden else 'Hide' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.config_delete', config_id=c.id) }}" onsubmit="return confirmSubmit(this, 'Configni o\'chirmoqchimisiz?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Hozircha configlar yo'q.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

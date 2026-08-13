@@ -1,0 +1,31 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}Site Settings{% endblock %}
+
+{% block admin_content %}
+<h1>Sayt sozlamalari</h1>
+
+<form method="post" class="card" style="padding:26px; max-width:560px;">
+  {{ form.hidden_tag() }}
+
+  <div class="form-group">
+    <label>{{ form.site_name.label }}</label>
+    {{ form.site_name() }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.telegram_url.label }}</label>
+    {{ form.telegram_url(placeholder="https://t.me/cwhub") }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.contact_email.label }}</label>
+    {{ form.contact_email() }}
+  </div>
+
+  <div class="form-group checkbox-row">
+    {{ form.maintenance_mode() }}<label style="margin:0;">{{ form.maintenance_mode.label }}</label>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Saqlash</button>
+</form>
+{% endblock %}

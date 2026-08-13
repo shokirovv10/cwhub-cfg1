@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Xaridlarim{% endblock %}
+
+{% block content %}
+<section class="section container">
+  <h1>Xaridlarim</h1>
+
+  {% if orders %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th><th>Config</th><th>Narxi</th><th>Sana</th><th>To'lov holati</th><th>Order holati</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for o in orders %}
+        <tr>
+          <td>#{{ o.id }}</td>
+          <td><a href="{{ url_for('configs.config_detail', slug=o.config.slug) }}">{{ o.config.name }}</a></td>
+          <td>{{ "%.0f"|format(o.amount) }} so'm</td>
+          <td>{{ o.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+          <td>
+            {% if o.payment %}
+              <span class="badge badge-{{ 'paid' if o.payment.status == 'APPROVED' else 'review' if o.payment.status == 'UNDER_REVIEW' else 'rejected' if o.payment.status == 'REJECTED' else 'pending' }}">
+                {{ o.payment.status }}
+              </span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <span class="badge badge-{{ 'paid' if o.status == 'PAID' else 'review' if o.status == 'UNDER_REVIEW' else 'rejected' if o.status in ['REJECTED','CANCELLED'] else 'pending' }}">
+              {{ o.status }}
+            </span>
+          </td>
+          <td>
+            {% if o.status == 'PAID' %}
+              <a href="{{ url_for('orders.download_config', order_id=o.id) }}" class="btn btn-sm btn-primary">Yuklab olish</a>
+            {% elif o.status in ['AWAITING_RECEIPT', 'PENDING_PAYMENT', 'REJECTED'] %}
+              <a href="{{ url_for('orders.checkout_payment', order_id=o.id) }}" class="btn btn-sm btn-outline">To'lov</a>
+            {% else %}
+              <a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="btn btn-sm btn-secondary">Ko'rish</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <h3>Hozircha buyurtmalar yo'q</h3>
+    <p>Configlar bo'limiga o'tib, o'zingizga yoqqan configni sotib oling.</p>
+    <a href="{{ url_for('configs.config_list') }}" class="btn btn-primary">Configlarni ko'rish</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

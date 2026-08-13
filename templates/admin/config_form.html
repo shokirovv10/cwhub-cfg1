@@ -1,0 +1,74 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}{{ 'Yangi config' if mode == 'new' else 'Configni tahrirlash' }}{% endblock %}
+
+{% block admin_content %}
+<h1>{{ 'Yangi config qo\'shish' if mode == 'new' else 'Configni tahrirlash: ' + config.name }}</h1>
+
+<form method="post" enctype="multipart/form-data" class="card" style="padding:26px; max-width:640px;">
+  {{ form.hidden_tag() }}
+
+  <div class="form-group">
+    <label>{{ form.name.label }}</label>
+    {{ form.name() }}
+    {% for e in form.name.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.description.label }}</label>
+    {{ form.description() }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.features.label }}</label>
+    {{ form.features(placeholder="Har bir xususiyatni yangi qatorda yozing") }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.price.label }}</label>
+    {{ form.price() }}
+    {% for e in form.price.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.category_id.label }}</label>
+    {{ form.category_id() }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.author.label }}</label>
+    {{ form.author() }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.cs_version.label }}</label>
+    {{ form.cs_version() }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.demo_video_url.label }}</label>
+    {{ form.demo_video_url(placeholder="https://youtube.com/...") }}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.cfg_file.label }}{% if mode == 'edit' %} (bo'sh qoldiring - o'zgarmaydi){% endif %}</label>
+    {{ form.cfg_file() }}
+    {% for e in form.cfg_file.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+  </div>
+
+  <div class="form-group">
+    <label>{{ form.screenshot.label }}{% if mode == 'edit' %} (bo'sh qoldiring - o'zgarmaydi){% endif %}</label>
+    {{ form.screenshot() }}
+    {% for e in form.screenshot.errors %}<div class="field-error">{{ e }}</div>{% endfor %}
+  </div>
+
+  <div class="form-group checkbox-row">
+    {{ form.is_active() }}<label style="margin:0;">{{ form.is_active.label }}</label>
+  </div>
+  <div class="form-group checkbox-row">
+    {{ form.is_hidden() }}<label style="margin:0;">{{ form.is_hidden.label }}</label>
+  </div>
+
+  <button type="submit" class="btn btn-primary">{{ 'Qo\'shish' if mode == 'new' else 'Saqlash' }}</button>
+  <a href="{{ url_for('admin.config_list') }}" class="btn btn-secondary">Bekor qilish</a>
+</form>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}Reviews{% endblock %}
+
+{% block admin_content %}
+<h1>Sharhlar</h1>
+
+{% if reviews %}
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>User</th><th>Config</th><th>Reyting</th><th>Izoh</th><th>Sana</th><th></th></tr></thead>
+    <tbody>
+      {% for r in reviews %}
+      <tr>
+        <td>{{ r.user.username }}</td>
+        <td><a href="{{ url_for('configs.config_detail', slug=r.config.slug) }}" target="_blank">{{ r.config.name }}</a></td>
+        <td class="stars">{{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}</td>
+        <td style="max-width:280px;">{{ r.comment or '—' }}</td>
+        <td>{{ r.created_at.strftime('%d.%m.%Y') }}</td>
+        <td>
+          <form method="post" action="{{ url_for('admin.review_delete', review_id=r.id) }}" onsubmit="return confirmSubmit(this, 'Reviewni o\'chirmoqchimisiz?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty-state">
+  <h3>Hozircha sharhlar yo'q</h3>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}Orders{% endblock %}
+
+{% block admin_content %}
+<h1>Barcha buyurtmalar</h1>
+
+<form method="get" class="filters-bar">
+  <select name="status">
+    <option value="">Barcha statuslar</option>
+    {% for s in statuses %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-primary">Filtrlash</button>
+</form>
+
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>User</th><th>Config</th><th>Amount</th><th>Sana</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for o in orders %}
+      <tr>
+        <td>#{{ o.id }}</td>
+        <td><a href="{{ url_for('admin.user_detail', user_id=o.user.id) }}">{{ o.user.username }}</a></td>
+        <td>{{ o.config.name }}</td>
+        <td>{{ "%.0f"|format(o.amount) }}</td>
+        <td>{{ o.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+        <td><span class="badge badge-{{ 'paid' if o.status == 'PAID' else 'review' if o.status == 'UNDER_REVIEW' else 'rejected' if o.status in ['REJECTED','CANCELLED'] else 'pending' }}">{{ o.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Buyurtmalar topilmadi.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

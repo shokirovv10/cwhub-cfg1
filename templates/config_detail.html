@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ config.name }}{% endblock %}
+
+{% block content %}
+<section class="section container">
+  <div class="detail-grid">
+    <div class="screenshot">
+      {% if config.screenshot_filename %}
+        <img src="{{ url_for('main.screenshot', filename=config.screenshot_filename) }}" alt="{{ config.name }}">
+      {% else %}
+        <img src="{{ url_for('static', filename='images/placeholder.svg') }}" alt="{{ config.name }}">
+      {% endif %}
+    </div>
+
+    <div class="detail-info">
+      <span class="cat-tag">{{ config.category.name }}</span>
+      <h1>{{ config.name }}</h1>
+
+      <div class="detail-meta-row">
+        <span>👤 Muallif: <strong>{{ config.author }}</strong></span>
+        <span>★ {{ config.average_rating }} ({{ config.review_count }} sharh)</span>
+        <span>🛒 {{ config.sales_count }} ta sotilgan</span>
+        <span>🎮 {{ config.cs_version }}</span>
+      </div>
+
+      <p>{{ config.description }}</p>
+
+      <div class="detail-price">{{ "%.0f"|format(config.price) }} so'm</div>
+
+      {% if already_purchased %}
+        <a href="{{ url_for('orders.order_list') }}" class="btn btn-success btn-block">✓ Sotib olingan — Xaridlarim orqali yuklab oling</a>
+      {% elif current_user.is_authenticated %}
+        <a href="{{ url_for('orders.checkout', slug=config.slug) }}" class="btn btn-primary btn-block">Sotib olish</a>
+      {% else %}
+        <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-primary btn-block">Sotib olish uchun tizimga kiring</a>
+      {% endif %}
+
+      {% if config.demo_video_url %}
+        <p style="margin-top:14px;"><a href="{{ config.demo_video_url }}" target="_blank" rel="noopener" class="btn btn-outline btn-block">▶ Demo videoni ko'rish</a></p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if config.features %}
+  <div class="section" style="padding-top:0;">
+    <h2>Config xususiyatlari</h2>
+    <ul class="feature-list">
+      {% for line in config.features.split('\n') if line.strip() %}
+        <li>{{ line.strip() }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="section" style="padding-top:0;">
+    <h2>Sharhlar ({{ reviews|length }})</h2>
+
+    {% if can_review %}
+    <form method="post" action="{{ url_for('configs.submit_review', slug=config.slug) }}" class="card" style="padding:20px; margin-bottom:20px;">
+      {{ review_form.hidden_tag() }}
+      <div class="form-group">
+        <label>Reyting (1-5)</label>
+        {{ review_form.rating(min="1", max="5") }}
+      </div>
+      <div class="form-group">
+        <label>Izoh</label>
+        {{ review_form.comment(placeholder="Config haqida fikringiz...") }}
+      </div>
+      <button type="submit" class="btn btn-primary">Review qoldirish</button>
+    </form>
+    {% endif %}
+
+    {% for r in reviews %}
+    <div class="review-item">
+      <div class="review-head">
+        <span>{{ r.user.username }}</span>
+        <span>{{ r.created_at.strftime('%d.%m.%Y') }}</span>
+      </div>
+      <div class="stars">{{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}</div>
+      {% if r.comment %}<p style="margin-top:6px;">{{ r.comment }}</p>{% endif %}
+    </div>
+    {% else %}
+    <p>Hozircha sharhlar yo'q. Birinchi bo'lib fikr bildiring!</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

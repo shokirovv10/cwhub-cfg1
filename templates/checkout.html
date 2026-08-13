@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Checkout{% endblock %}
+
+{% block content %}
+<div class="card form-wide">
+  <h1>Buyurtmani tasdiqlash</h1>
+  <p class="subtitle">Sotib olishdan oldin ma'lumotlarni tekshiring</p>
+
+  <div class="detail-meta-row" style="margin-bottom:20px;">
+    <span>Config: <strong>{{ config.name }}</strong></span>
+    <span>Muallif: {{ config.author }}</span>
+    <span>Kategoriya: {{ config.category.name }}</span>
+  </div>
+
+  <table>
+    <tr><th>Mahsulot</th><td>{{ config.name }}</td></tr>
+    <tr><th>Narxi</th><td>{{ "%.0f"|format(config.price) }} so'm</td></tr>
+    <tr><th>Jami summa</th><td><strong>{{ "%.0f"|format(config.price) }} so'm</strong></td></tr>
+    <tr><th>To'lov usuli</th><td>Uzcard / Humo (manual, karta orqali)</td></tr>
+  </table>
+
+  <form method="post" style="margin-top:24px;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-primary btn-block">Buyurtmani tasdiqlash va to'lovga o'tish</button>
+  </form>
+</div>
+{% endblock %}

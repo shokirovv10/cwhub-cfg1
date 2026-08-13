@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Configlar{% endblock %}
+
+{% block content %}
+<section class="section container">
+  <h1>Barcha configlar</h1>
+
+  <form method="get" class="filters-bar">
+    <input type="text" name="q" value="{{ q }}" placeholder="Config nomi yoki muallif..." class="search-input">
+
+    <select name="category">
+      <option value="">Barcha kategoriyalar</option>
+      {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="sort">
+      <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Eng yangi</option>
+      <option value="bestselling" {% if sort == 'bestselling' %}selected{% endif %}>Eng ko'p sotilgan</option>
+      <option value="rating" {% if sort == 'rating' %}selected{% endif %}>Reyting bo'yicha</option>
+      <option value="price_asc" {% if sort == 'price_asc' %}selected{% endif %}>Narx: pastdan yuqoriga</option>
+      <option value="price_desc" {% if sort == 'price_desc' %}selected{% endif %}>Narx: yuqoridan pastga</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">Filtrlash</button>
+  </form>
+
+  {% if configs %}
+  <div class="grid">
+    {% for c in configs %}
+    <div class="config-card">
+      <a href="{{ url_for('configs.config_detail', slug=c.slug) }}" class="thumb">
+        {% if c.screenshot_filename %}
+          <img src="{{ url_for('main.screenshot', filename=c.screenshot_filename) }}" alt="{{ c.name }}">
+        {% else %}
+          <img src="{{ url_for('static', filename='images/placeholder.svg') }}" alt="{{ c.name }}">
+        {% endif %}
+      </a>
+      <div class="body">
+        <span class="cat-tag">{{ c.category.name }}</span>
+        <h3><a href="{{ url_for('configs.config_detail', slug=c.slug) }}">{{ c.name }}</a></h3>
+        <div class="meta">
+          <span>by {{ c.author }}</span>
+          <span class="rating">★ {{ c.average_rating }} ({{ c.review_count }})</span>
+        </div>
+        <div class="meta"><span>{{ c.sales_count }} ta sotilgan</span></div>
+        <div class="price-row">
+          <span class="price">{{ "%.0f"|format(c.price) }} so'm</span>
+        </div>
+        <div class="actions">
+          <a href="{{ url_for('configs.config_detail', slug=c.slug) }}" class="btn btn-secondary">Batafsil</a>
+          <a href="{{ url_for('orders.checkout', slug=c.slug) }}" class="btn btn-primary">Sotib olish</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="pagination">
+    {% if pagination.has_prev %}
+      <a href="{{ url_for('configs.config_list', page=pagination.prev_num, q=q, category=category_id, sort=sort) }}">← Oldingi</a>
+    {% endif %}
+    <span class="current">{{ pagination.page }} / {{ pagination.pages or 1 }}</span>
+    {% if pagination.has_next %}
+      <a href="{{ url_for('configs.config_list', page=pagination.next_num, q=q, category=category_id, sort=sort) }}">Keyingi →</a>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <h3>Hech narsa topilmadi</h3>
+    <p>Qidiruv shartlariga mos config yo'q. Filtrlarni o'zgartirib ko'ring.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "admin/layout.html" %}
+{% block admin_title %}Dashboard{% endblock %}
+
+{% block admin_content %}
+<h1>Dashboard</h1>
+
+<div class="stat-grid">
+  <div class="stat-box"><div class="num">{{ stats.users }}</div><div class="label">Users</div></div>
+  <div class="stat-box"><div class="num">{{ stats.configs }}</div><div class="label">Configs</div></div>
+  <div class="stat-box"><div class="num">{{ stats.orders }}</div><div class="label">Orders</div></div>
+  <div class="stat-box"><div class="num">{{ stats.paid_orders }}</div><div class="label">Paid orders</div></div>
+  <div class="stat-box"><div class="num">{{ stats.pending_payments }}</div><div class="label">Pending payments</div></div>
+  <div class="stat-box"><div class="num">{{ stats.rejected_payments }}</div><div class="label">Rejected payments</div></div>
+  <div class="stat-box"><div class="num">{{ "%.0f"|format(stats.total_revenue) }}</div><div class="label">Total revenue (so'm)</div></div>
+</div>
+
+<h2 style="margin-top:30px;">So'nggi buyurtmalar</h2>
+<div class="table-wrap">
+  <table>
+    <thead><tr><th>ID</th><th>User</th><th>Config</th><th>Amount</th><th>Status</th><th>Sana</th></tr></thead>
+    <tbody>
+      {% for o in recent_orders %}
+      <tr>
+        <td>#{{ o.id }}</td>
+        <td>{{ o.user.username }}</td>
+        <td>{{ o.config.name }}</td>
+        <td>{{ "%.0f"|format(o.amount) }}</td>
+        <td><span class="badge badge-{{ 'paid' if o.status == 'PAID' else 'review' if o.status == 'UNDER_REVIEW' else 'rejected' if o.status in ['REJECTED','CANCELLED'] else 'pending' }}">{{ o.status }}</span></td>
+        <td>{{ o.created_at.strftime('%d.%m.%Y') }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6">Hozircha buyurtmalar yo'q.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
