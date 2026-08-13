@@ -1,57 +1,291 @@
 {% extends "base.html" %}
+
 {% block title %}Xaridlarim{% endblock %}
 
 {% block content %}
-<section class="section container">
-  <h1>Xaridlarim</h1>
 
-  {% if orders %}
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Order ID</th><th>Config</th><th>Narxi</th><th>Sana</th><th>To'lov holati</th><th>Order holati</th><th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for o in orders %}
-        <tr>
-          <td>#{{ o.id }}</td>
-          <td><a href="{{ url_for('configs.config_detail', slug=o.config.slug) }}">{{ o.config.name }}</a></td>
-          <td>{{ "%.0f"|format(o.amount) }} so'm</td>
-          <td>{{ o.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-          <td>
-            {% if o.payment %}
-              <span class="badge badge-{{ 'paid' if o.payment.status == 'APPROVED' else 'review' if o.payment.status == 'UNDER_REVIEW' else 'rejected' if o.payment.status == 'REJECTED' else 'pending' }}">
-                {{ o.payment.status }}
-              </span>
-            {% else %}—{% endif %}
-          </td>
-          <td>
-            <span class="badge badge-{{ 'paid' if o.status == 'PAID' else 'review' if o.status == 'UNDER_REVIEW' else 'rejected' if o.status in ['REJECTED','CANCELLED'] else 'pending' }}">
-              {{ o.status }}
-            </span>
-          </td>
-          <td>
-            {% if o.status == 'PAID' %}
-              <a href="{{ url_for('orders.download_config', order_id=o.id) }}" class="btn btn-sm btn-primary">Yuklab olish</a>
-            {% elif o.status in ['AWAITING_RECEIPT', 'PENDING_PAYMENT', 'REJECTED'] %}
-              <a href="{{ url_for('orders.checkout_payment', order_id=o.id) }}" class="btn btn-sm btn-outline">To'lov</a>
-            {% else %}
-              <a href="{{ url_for('orders.order_detail', order_id=o.id) }}" class="btn btn-sm btn-secondary">Ko'rish</a>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-  <div class="empty-state">
-    <h3>Hozircha buyurtmalar yo'q</h3>
-    <p>Configlar bo'limiga o'tib, o'zingizga yoqqan configni sotib oling.</p>
-    <a href="{{ url_for('configs.config_list') }}" class="btn btn-primary">Configlarni ko'rish</a>
-  </div>
-  {% endif %}
+<section class="section container">
+
+    <div class="section-header">
+        <div>
+            <h1>Xaridlarim</h1>
+            <p>Bu yerda barcha xaridlaringiz va to'lov holatlaringiz ko'rsatiladi.</p>
+        </div>
+    </div>
+
+
+    {% if orders %}
+
+    <div class="table-wrap">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Config</th>
+                    <th>Narxi</th>
+                    <th>Sana</th>
+                    <th>To'lov</th>
+                    <th>Order holati</th>
+                    <th>Amal</th>
+                </tr>
+            </thead>
+
+
+            <tbody>
+
+                {% for o in orders %}
+
+                <tr>
+
+                    <!-- ORDER ID -->
+                    <td>
+                        <strong>#{{ o.id }}</strong>
+                    </td>
+
+
+                    <!-- CONFIG -->
+                    <td>
+
+                        {% if o.config %}
+
+                            <a
+                                href="{{ url_for(
+                                    'configs.config_detail',
+                                    slug=o.config.slug
+                                ) }}"
+                            >
+                                {{ o.config.name }}
+                            </a>
+
+                        {% else %}
+
+                            <span>Config o'chirilgan</span>
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- PRICE -->
+                    <td>
+                        <strong>
+                            {{ "%.0f"|format(o.amount) }} so'm
+                        </strong>
+                    </td>
+
+
+                    <!-- DATE -->
+                    <td>
+
+                        {% if o.created_at %}
+
+                            {{ o.created_at.strftime(
+                                '%d.%m.%Y %H:%M'
+                            ) }}
+
+                        {% else %}
+
+                            —
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- PAYMENT STATUS -->
+                    <td>
+
+                        {% if o.payment %}
+
+                            {% if o.payment.status == 'APPROVED' %}
+
+                                <span class="badge badge-paid">
+                                    ✓ To'langan
+                                </span>
+
+                            {% elif o.payment.status == 'UNDER_REVIEW' %}
+
+                                <span class="badge badge-review">
+                                    ⏳ Tekshirilmoqda
+                                </span>
+
+                            {% elif o.payment.status == 'REJECTED' %}
+
+                                <span class="badge badge-rejected">
+                                    ✕ Rad etilgan
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge badge-pending">
+                                    To'lov kutilmoqda
+                                </span>
+
+                            {% endif %}
+
+                        {% else %}
+
+                            <span class="badge badge-pending">
+                                To'lov mavjud emas
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- ORDER STATUS -->
+                    <td>
+
+                        {% if o.status == 'PAID' %}
+
+                            <span class="badge badge-paid">
+                                ✓ PAID
+                            </span>
+
+                        {% elif o.status == 'UNDER_REVIEW' %}
+
+                            <span class="badge badge-review">
+                                ⏳ Tekshirilmoqda
+                            </span>
+
+                        {% elif o.status == 'AWAITING_RECEIPT' %}
+
+                            <span class="badge badge-pending">
+                                Chek kutilmoqda
+                            </span>
+
+                        {% elif o.status == 'PENDING_PAYMENT' %}
+
+                            <span class="badge badge-pending">
+                                To'lov kutilmoqda
+                            </span>
+
+                        {% elif o.status == 'REJECTED' %}
+
+                            <span class="badge badge-rejected">
+                                ✕ REJECTED
+                            </span>
+
+                        {% elif o.status == 'CANCELLED' %}
+
+                            <span class="badge badge-rejected">
+                                Bekor qilingan
+                            </span>
+
+                        {% else %}
+
+                            <span class="badge badge-pending">
+                                {{ o.status }}
+                            </span>
+
+                        {% endif %}
+
+                    </td>
+
+
+                    <!-- ACTION -->
+                    <td>
+
+                        {% if o.status == 'PAID' %}
+
+                            {% if o.config and o.config.cfg_file_filename %}
+
+                                <a
+                                    href="{{ url_for(
+                                        'orders.download',
+                                        order_id=o.id
+                                    ) }}"
+                                    class="btn btn-sm btn-primary"
+                                >
+                                    ⬇ Yuklab olish
+                                </a>
+
+                            {% else %}
+
+                                <span class="badge badge-rejected">
+                                    Fayl mavjud emas
+                                </span>
+
+                            {% endif %}
+
+
+                        {% elif o.status in [
+                            'PENDING_PAYMENT',
+                            'AWAITING_RECEIPT',
+                            'REJECTED'
+                        ] %}
+
+                            <a
+                                href="{{ url_for(
+                                    'orders.payment',
+                                    order_id=o.id
+                                ) }}"
+                                class="btn btn-sm btn-outline"
+                            >
+                                💳 To'lov
+                            </a>
+
+
+                        {% elif o.status == 'UNDER_REVIEW' %}
+
+                            <span class="badge badge-review">
+                                Tekshirilmoqda
+                            </span>
+
+
+                        {% elif o.status == 'CANCELLED' %}
+
+                            <span class="badge badge-rejected">
+                                Bekor qilingan
+                            </span>
+
+
+                        {% else %}
+
+                            <span>—</span>
+
+                        {% endif %}
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+
+    {% else %}
+
+    <!-- EMPTY STATE -->
+
+    <div class="empty-state">
+
+        <h3>Hozircha xaridlar yo'q</h3>
+
+        <p>
+            Configlar bo'limiga o'tib,
+            o'zingizga yoqqan configni sotib oling.
+        </p>
+
+        <a
+            href="{{ url_for('configs.config_list') }}"
+            class="btn btn-primary"
+        >
+            Configlarni ko'rish
+        </a>
+
+    </div>
+
+    {% endif %}
+
 </section>
+
 {% endblock %}
