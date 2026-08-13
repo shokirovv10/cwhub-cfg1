@@ -14,7 +14,14 @@ from flask import (
 from flask_login import current_user, login_required
 
 from app.extensions import db
-from app.models import Config, Category, Review
+from app.models import (
+    Config,
+    Category,
+    Review,
+    Download,
+    Order,
+    OrderStatus,
+)
 from app.forms import ReviewForm
 
 
@@ -29,6 +36,7 @@ PER_PAGE = 9
 
 @configs_bp.route("/configs")
 def config_list():
+
     q = request.args.get("q", "").strip()
     category_id = request.args.get("category", type=int)
     sort = request.args.get("sort", "newest")
@@ -39,8 +47,9 @@ def config_list():
         is_hidden=False
     )
 
-    # Qidiruv
+    # QIDIRUV
     if q:
+
         like = f"%{q}%"
 
         query = query.filter(
@@ -50,13 +59,14 @@ def config_list():
             )
         )
 
-    # Kategoriya
+    # KATEGORIYA
     if category_id:
-        query = query.filter_by(
-            category_id=category_id
+
+        query = query.filter(
+            Config.category_id == category_id
         )
 
-    # Saralash
+    # SARALASH
     if sort == "price_asc":
 
         query = query.order_by(
@@ -77,20 +87,19 @@ def config_list():
 
     elif sort == "rating":
 
-        # average_rating property bo'lsa,
-        # paginationdan keyin Python orqali saralanadi.
+        # Rating property bo'lgani sababli
+        # Python orqali saralanadi.
         query = query.order_by(
             Config.created_at.desc()
         )
 
     else:
 
-        # Yangi configlar
         query = query.order_by(
             Config.created_at.desc()
         )
 
-    # Pagination
+    # PAGINATION
     pagination = query.paginate(
         page=page,
         per_page=PER_PAGE,
@@ -99,12 +108,12 @@ def config_list():
 
     items = pagination.items
 
-    # Rating bo'yicha saralash
+    # RATING BO'YICHA SARALASH
     if sort == "rating":
 
         items = sorted(
             items,
-            key=lambda c: c.average_rating,
+            key=lambda config: config.average_rating,
             reverse=True
         )
 
@@ -177,6 +186,10 @@ def config_detail(slug):
 @login_required
 def download_config(slug):
 
+    # --------------------------------------------------------
+    # CONFIGNI TOPISH
+    # --------------------------------------------------------
+
     config = Config.query.filter_by(
         slug=slug,
         is_active=True,
@@ -184,10 +197,16 @@ def download_config(slug):
     ).first_or_404()
 
     # --------------------------------------------------------
-    # Sotib olganligini tekshirish
+    # SOTIB OLINGAN ORDERNI TOPISH
     # --------------------------------------------------------
 
-    if not current_user.has_purchased(config.id):
+    order = Order.query.filter_by(
+        user_id=current_user.id,
+        config_id=config.id,
+        status=OrderStatus.PAID.value
+    ).first()
+
+    if not order:
 
         flash(
             "Bu configni yuklab olish uchun avval sotib olishingiz kerak.",
@@ -202,15 +221,20 @@ def download_config(slug):
         )
 
     # --------------------------------------------------------
-    # Fayl yo'lini olish
+    # FAYL NOMI
     # --------------------------------------------------------
 
-    filename = config.file_path
+    filename = config.cfg_file_filename
 
     if not filename:
 
+        current_app.logger.error(
+            "Config uchun cfg_file_filename mavjud emas. Config ID: %s",
+            config.id
+        )
+
         flash(
-            "Config fayli biriktirilmagan.",
+            "Config fayli topilmadi.",
             "danger"
         )
 
@@ -222,7 +246,7 @@ def download_config(slug):
         )
 
     # --------------------------------------------------------
-    # Upload folder
+    # CONFIG UPLOAD PAPKASI
     # --------------------------------------------------------
 
     upload_folder = current_app.config.get(
@@ -232,7 +256,7 @@ def download_config(slug):
     if not upload_folder:
 
         current_app.logger.error(
-            "UPLOAD_FOLDER konfiguratsiyasi mavjud emas."
+            "UPLOAD_FOLDER konfiguratsiyada mavjud emas."
         )
 
         flash(
@@ -247,45 +271,54 @@ def download_config(slug):
             )
         )
 
+    configs_subdir = current_app.config.get(
+        "CONFIGS_SUBDIR",
+        "configs"
+    )
+
+    configs_folder = os.path.join(
+        upload_folder,
+        configs_subdir
+    )
+
     # --------------------------------------------------------
-    # To'liq fayl yo'li
+    # XAVFSIZ ABSOLUTE PATH
     # --------------------------------------------------------
+
+    configs_root = os.path.abspath(
+        configs_folder
+    )
 
     file_path = os.path.abspath(
         os.path.join(
-            upload_folder,
+            configs_root,
             filename
         )
     )
 
-    upload_root = os.path.abspath(
-        upload_folder
-    )
-
     # --------------------------------------------------------
-    # Security:
-    # Upload papkasidan tashqariga chiqishni bloklash
+    # PATH TRAVERSAL HIMOYASI
     # --------------------------------------------------------
 
     if not file_path.startswith(
-        upload_root + os.sep
+        configs_root + os.sep
     ):
 
         current_app.logger.warning(
-            "Noto'g'ri fayl yo'liga urinish: %s",
+            "Noto'g'ri config path: %s",
             filename
         )
 
         abort(404)
 
     # --------------------------------------------------------
-    # Fayl mavjudligini tekshirish
+    # FAYL MAVJUDMI?
     # --------------------------------------------------------
 
     if not os.path.isfile(file_path):
 
         current_app.logger.error(
-            "Config fayli serverda topilmadi: %s",
+            "Config fayli topilmadi: %s",
             file_path
         )
 
@@ -302,27 +335,26 @@ def download_config(slug):
         )
 
     # --------------------------------------------------------
-    # Download count
+    # DOWNLOAD LOG
     # --------------------------------------------------------
 
-    if hasattr(config, "download_count"):
+    download = Download(
+        order_id=order.id,
+        user_id=current_user.id,
+        ip_address=request.remote_addr
+    )
 
-        config.download_count = (
-            config.download_count or 0
-        ) + 1
-
-        db.session.commit()
+    db.session.add(download)
+    db.session.commit()
 
     # --------------------------------------------------------
-    # Faylni yuklash
+    # DOWNLOAD
     # --------------------------------------------------------
 
     return send_file(
         file_path,
         as_attachment=True,
-        download_name=os.path.basename(
-            file_path
-        )
+        download_name=os.path.basename(file_path)
     )
 
 
@@ -344,7 +376,7 @@ def submit_review(slug):
     ).first_or_404()
 
     # --------------------------------------------------------
-    # Sotib olganmi?
+    # SOTIB OLGANMI?
     # --------------------------------------------------------
 
     if not current_user.has_purchased(
@@ -364,7 +396,7 @@ def submit_review(slug):
         )
 
     # --------------------------------------------------------
-    # Oldin review yozganmi?
+    # OLDIN REVIEW YOZGANMI?
     # --------------------------------------------------------
 
     existing = Review.query.filter_by(
@@ -387,7 +419,7 @@ def submit_review(slug):
         )
 
     # --------------------------------------------------------
-    # Form
+    # REVIEW FORM
     # --------------------------------------------------------
 
     form = ReviewForm()
