@@ -1,118 +1,644 @@
 import os
-from flask import (
-    Blueprint, render_template, redirect, url_for, flash, request,
-    send_file, abort
-)
-from flask_login import login_required, current_user
+import uuid
 
-from app.extensions import db, limiter
-from app.models import Config, Order, OrderStatus, PaymentSettings, Download, now_utc
-from app.forms import ReceiptUploadForm
-from services import payment_service
-from services.file_service import save_uploaded_file, safe_upload_path
+from flask import (
+    Blueprint,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    flash,
+    send_from_directory,
+    current_app,
+    abort,
+)
+
+from flask_login import login_required, current_user
+from werkzeug.utils import secure_filename
+
+from app.extensions import db
+from app.models import (
+    Config,
+    Order,
+    Payment,
+    PaymentReceipt,
+    Download,
+    OrderStatus,
+    PaymentStatus,
+)
+
 
 orders_bp = Blueprint("orders", __name__)
 
-
-@orders_bp.route("/checkout/<slug>", methods=["GET", "POST"])
-@login_required
-def checkout(slug):
-    config = Config.query.filter_by(slug=slug, is_active=True).first_or_404()
-
-    if current_user.has_purchased(config.id):
-        flash("Siz bu configni allaqachon sotib olgansiz.", "info")
-        return redirect(url_for("configs.config_detail", slug=slug))
-
-    # Agar oldin yaratilgan, hali to'lanmagan buyurtma bo'lsa - o'shani qayta ishlatamiz
-    existing_order = Order.query.filter_by(
-        user_id=current_user.id, config_id=config.id
-    ).filter(Order.status.in_([
-        OrderStatus.PENDING_PAYMENT.value, OrderStatus.AWAITING_RECEIPT.value, OrderStatus.UNDER_REVIEW.value
-    ])).first()
-
-    if request.method == "POST" and not existing_order:
-        order = Order(user_id=current_user.id, config_id=config.id, amount=config.price)
-        db.session.add(order)
-        db.session.commit()
-        payment_service.create_payment(order, provider="manual")
-        return redirect(url_for("orders.checkout_payment", order_id=order.id))
-
-    if existing_order:
-        return redirect(url_for("orders.checkout_payment", order_id=existing_order.id))
-
-    return render_template("checkout.html", config=config)
+ALLOWED_RECEIPT_EXTENSIONS = {
+    "jpg",
+    "jpeg",
+    "png",
+    "webp",
+    "pdf",
+}
 
 
-@orders_bp.route("/checkout/order/<int:order_id>/payment", methods=["GET", "POST"])
-@login_required
-def checkout_payment(order_id):
-    order = Order.query.get_or_404(order_id)
-    if order.user_id != current_user.id:
-        abort(403)
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
 
-    if order.status == OrderStatus.PAID.value:
-        return redirect(url_for("orders.order_detail", order_id=order.id))
+def allowed_receipt(filename):
+    if not filename:
+        return False
 
-    settings = PaymentSettings.query.first()
-    form = ReceiptUploadForm()
+    if "." not in filename:
+        return False
 
-    if form.validate_on_submit():
-        try:
-            filename = save_uploaded_file(
-                form.receipt.data, "receipts", {"jpg", "jpeg", "png", "pdf"},
-                {"image/jpeg", "image/png", "application/pdf"},
-            )
-            payment_service.attach_receipt(order.payment, filename)
-            flash("Chek muvaffaqiyatli yuborildi. To'lov admin tomonidan tekshirilmoqda.", "success")
-            return redirect(url_for("orders.order_detail", order_id=order.id))
-        except ValueError as e:
-            flash(str(e), "danger")
+    ext = filename.rsplit(".", 1)[1].lower()
 
-    return render_template("checkout_payment.html", order=order, settings=settings, form=form)
+    return ext in ALLOWED_RECEIPT_EXTENSIONS
 
+
+def get_config_folder():
+    """
+    Config fayllari saqlanadigan papka.
+    app/config.py yoki __init__.py ichida UPLOAD_FOLDER
+    mavjud bo'lishi kerak.
+    """
+
+    upload_folder = current_app.config.get("UPLOAD_FOLDER")
+
+    if not upload_folder:
+        upload_folder = os.path.join(
+            current_app.root_path,
+            "uploads"
+        )
+
+    config_folder = os.path.join(
+        upload_folder,
+        "configs"
+    )
+
+    os.makedirs(config_folder, exist_ok=True)
+
+    return config_folder
+
+
+def get_receipt_folder():
+    """
+    To'lov cheklari saqlanadigan papka.
+    """
+
+    upload_folder = current_app.config.get("UPLOAD_FOLDER")
+
+    if not upload_folder:
+        upload_folder = os.path.join(
+            current_app.root_path,
+            "uploads"
+        )
+
+    receipt_folder = os.path.join(
+        upload_folder,
+        "receipts"
+    )
+
+    os.makedirs(receipt_folder, exist_ok=True)
+
+    return receipt_folder
+
+
+# ============================================================
+# MY ORDERS
+# ============================================================
 
 @orders_bp.route("/orders")
 @login_required
 def order_list():
-    orders = current_user.orders.order_by(Order.created_at.desc()).all()
-    return render_template("orders.html", orders=orders)
+
+    orders = (
+        Order.query
+        .filter_by(user_id=current_user.id)
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+
+    return render_template(
+        "orders.html",
+        orders=orders
+    )
 
 
-@orders_bp.route("/orders/<int:order_id>")
+# ============================================================
+# CHECKOUT
+# ============================================================
+
+@orders_bp.route("/checkout/<slug>")
 @login_required
-def order_detail(order_id):
-    order = Order.query.get_or_404(order_id)
-    if order.user_id != current_user.id:
-        abort(403)
-    return render_template("order_detail.html", order=order)
+def checkout(slug):
+
+    config = (
+        Config.query
+        .filter_by(
+            slug=slug,
+            is_active=True,
+            is_hidden=False
+        )
+        .first_or_404()
+    )
+
+    # Agar foydalanuvchi allaqachon sotib olgan bo'lsa
+    if current_user.has_purchased(config.id):
+
+        flash(
+            "Siz bu configni allaqachon sotib olgansiz.",
+            "info"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    return render_template(
+        "checkout.html",
+        config=config
+    )
 
 
-@orders_bp.route("/orders/<int:order_id>/download")
+# ============================================================
+# CREATE ORDER
+# ============================================================
+
+@orders_bp.route(
+    "/checkout/<slug>/create",
+    methods=["POST"]
+)
 @login_required
-@limiter.limit("999 per hour")
-def download_config(order_id):
-    """Himoyalangan yuklab olish: login, order egaligi va PAID statusi tekshiriladi."""
-    order = Order.query.get_or_404(order_id)
+def create_order(slug):
 
-    if order.user_id != current_user.id:
-        abort(403)
-    if order.status != OrderStatus.PAID.value:
-        abort(403)
-    if not current_user.has_purchased(order.config_id):
-        abort(403)
+    config = (
+        Config.query
+        .filter_by(
+            slug=slug,
+            is_active=True,
+            is_hidden=False
+        )
+        .first_or_404()
+    )
 
-    config = order.config
-    try:
-        file_path = safe_upload_path("configs", config.cfg_file_filename)
-    except ValueError:
-        abort(403)
+    # Bir xil configni qayta sotib olishni bloklash
+    existing_paid = (
+        Order.query
+        .filter_by(
+            user_id=current_user.id,
+            config_id=config.id,
+            status=OrderStatus.PAID.value
+        )
+        .first()
+    )
 
-    if not os.path.isfile(file_path):
-        abort(404)
+    if existing_paid:
 
-    log = Download(order_id=order.id, user_id=current_user.id, ip_address=request.remote_addr)
-    db.session.add(log)
+        flash(
+            "Siz bu configni allaqachon sotib olgansiz.",
+            "info"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    # Eski pending order mavjud bo'lsa
+    existing_pending = (
+        Order.query
+        .filter(
+            Order.user_id == current_user.id,
+            Order.config_id == config.id,
+            Order.status.in_([
+                OrderStatus.PENDING_PAYMENT.value,
+                OrderStatus.AWAITING_RECEIPT.value,
+                OrderStatus.UNDER_REVIEW.value,
+            ])
+        )
+        .order_by(Order.created_at.desc())
+        .first()
+    )
+
+    if existing_pending:
+
+        return redirect(
+            url_for(
+                "orders.payment",
+                order_id=existing_pending.id
+            )
+        )
+
+    # Yangi order
+    order = Order(
+        user_id=current_user.id,
+        config_id=config.id,
+        amount=config.price,
+        status=OrderStatus.PENDING_PAYMENT.value,
+    )
+
+    db.session.add(order)
+    db.session.flush()
+
+    # Payment yaratish
+    payment = Payment(
+        order_id=order.id,
+        provider="manual",
+        status=PaymentStatus.PENDING.value,
+    )
+
+    db.session.add(payment)
+
     db.session.commit()
 
-    download_name = f"{config.slug}.{config.cfg_file_filename.rsplit('.', 1)[-1]}"
-    return send_file(file_path, as_attachment=True, download_name=download_name)
+    return redirect(
+        url_for(
+            "orders.payment",
+            order_id=order.id
+        )
+    )
+
+
+# ============================================================
+# PAYMENT PAGE
+# ============================================================
+
+@orders_bp.route("/payment/<int:order_id>")
+@login_required
+def payment(order_id):
+
+    order = (
+        Order.query
+        .filter_by(
+            id=order_id,
+            user_id=current_user.id
+        )
+        .first_or_404()
+    )
+
+    if order.status == OrderStatus.PAID.value:
+
+        flash(
+            "Bu order allaqachon to'langan.",
+            "success"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    payment = order.payment
+
+    return render_template(
+        "payment.html",
+        order=order,
+        payment=payment
+    )
+
+
+# ============================================================
+# UPLOAD RECEIPT
+# ============================================================
+
+@orders_bp.route(
+    "/payment/<int:order_id>/receipt",
+    methods=["POST"]
+)
+@login_required
+def upload_receipt(order_id):
+
+    order = (
+        Order.query
+        .filter_by(
+            id=order_id,
+            user_id=current_user.id
+        )
+        .first_or_404()
+    )
+
+    # Paid bo'lsa yana chek kerak emas
+    if order.status == OrderStatus.PAID.value:
+
+        flash(
+            "Bu order allaqachon tasdiqlangan.",
+            "success"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    file = request.files.get("receipt")
+
+    if not file:
+
+        flash(
+            "Chek faylini tanlang.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "orders.payment",
+                order_id=order.id
+            )
+        )
+
+    if not file.filename:
+
+        flash(
+            "Chek fayli tanlanmagan.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "orders.payment",
+                order_id=order.id
+            )
+        )
+
+    if not allowed_receipt(file.filename):
+
+        flash(
+            "Faqat JPG, JPEG, PNG, WEBP yoki PDF fayl yuklash mumkin.",
+            "danger"
+        )
+
+        return redirect(
+            url_for(
+                "orders.payment",
+                order_id=order.id
+            )
+        )
+
+    # Payment mavjudligini tekshirish
+    payment = order.payment
+
+    if not payment:
+
+        payment = Payment(
+            order_id=order.id,
+            provider="manual",
+            status=PaymentStatus.PENDING.value,
+        )
+
+        db.session.add(payment)
+        db.session.flush()
+
+    # Eski receipt bo'lsa
+    old_receipt = payment.receipt
+
+    if old_receipt:
+
+        old_path = os.path.join(
+            get_receipt_folder(),
+            old_receipt.filename
+        )
+
+        if os.path.isfile(old_path):
+
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+        db.session.delete(old_receipt)
+        db.session.flush()
+
+    # Random unique filename
+    original_name = secure_filename(
+        file.filename
+    )
+
+    extension = ""
+
+    if "." in original_name:
+
+        extension = (
+            "." +
+            original_name.rsplit(".", 1)[1].lower()
+        )
+
+    filename = (
+        uuid.uuid4().hex +
+        extension
+    )
+
+    receipt_folder = get_receipt_folder()
+
+    file.save(
+        os.path.join(
+            receipt_folder,
+            filename
+        )
+    )
+
+    receipt = PaymentReceipt(
+        payment_id=payment.id,
+        filename=filename,
+    )
+
+    db.session.add(receipt)
+
+    payment.status = PaymentStatus.UNDER_REVIEW.value
+
+    order.status = OrderStatus.UNDER_REVIEW.value
+
+    db.session.commit()
+
+    flash(
+        "Chek muvaffaqiyatli yuborildi. Admin tekshiradi.",
+        "success"
+    )
+
+    return redirect(
+        url_for("orders.order_list")
+    )
+
+
+# ============================================================
+# DOWNLOAD CONFIG
+# ============================================================
+
+@orders_bp.route(
+    "/download/<int:order_id>"
+)
+@login_required
+def download(order_id):
+
+    # Faqat o'z orderini topadi
+    order = (
+        Order.query
+        .filter_by(
+            id=order_id,
+            user_id=current_user.id
+        )
+        .first()
+    )
+
+    if not order:
+
+        abort(404)
+
+    # Faqat PAID order yuklana oladi
+    if order.status != OrderStatus.PAID.value:
+
+        flash(
+            "Configni yuklab olish uchun to'lov tasdiqlanishi kerak.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    config = order.config
+
+    if not config:
+
+        abort(404)
+
+    filename = config.cfg_file_filename
+
+    if not filename:
+
+        flash(
+            "Config fayli mavjud emas.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    config_folder = get_config_folder()
+
+    # Faqat fayl nomidan foydalanamiz
+    safe_filename = os.path.basename(filename)
+
+    file_path = os.path.abspath(
+        os.path.join(
+            config_folder,
+            safe_filename
+        )
+    )
+
+    folder_path = os.path.abspath(
+        config_folder
+    )
+
+    # Path traversal himoyasi
+    if not (
+        file_path == folder_path
+        or file_path.startswith(
+            folder_path + os.sep
+        )
+    ):
+
+        abort(404)
+
+    # Fayl mavjudligini tekshirish
+    if not os.path.isfile(file_path):
+
+        current_app.logger.error(
+            "Config file not found: %s",
+            file_path
+        )
+
+        flash(
+            "Config fayli serverda topilmadi.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    # Download log
+    download_log = Download(
+        order_id=order.id,
+        user_id=current_user.id,
+        ip_address=request.headers.get(
+            "X-Forwarded-For",
+            request.remote_addr
+        ),
+    )
+
+    db.session.add(download_log)
+
+    # Sales countni bu yerda oshirmaymiz.
+    # Sotuv tasdiqlanganda oshirilishi kerak.
+
+    db.session.commit()
+
+    # Original filenameni download uchun berish
+    download_name = secure_filename(
+        config.name
+    )
+
+    if not download_name:
+
+        download_name = "config"
+
+    if not download_name.lower().endswith(".cfg"):
+
+        download_name += ".cfg"
+
+    return send_from_directory(
+        config_folder,
+        safe_filename,
+        as_attachment=True,
+        download_name=download_name,
+    )
+
+
+# ============================================================
+# CANCEL ORDER
+# ============================================================
+
+@orders_bp.route(
+    "/orders/<int:order_id>/cancel",
+    methods=["POST"]
+)
+@login_required
+def cancel_order(order_id):
+
+    order = (
+        Order.query
+        .filter_by(
+            id=order_id,
+            user_id=current_user.id
+        )
+        .first_or_404()
+    )
+
+    if order.status in [
+        OrderStatus.PAID.value,
+        OrderStatus.UNDER_REVIEW.value,
+    ]:
+
+        flash(
+            "Bu orderni bekor qilib bo'lmaydi.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("orders.order_list")
+        )
+
+    order.status = OrderStatus.CANCELLED.value
+
+    if order.payment:
+
+        order.payment.status = PaymentStatus.REJECTED.value
+
+    db.session.commit()
+
+    flash(
+        "Order bekor qilindi.",
+        "success"
+    )
+
+    return redirect(
+        url_for("orders.order_list")
+    )
