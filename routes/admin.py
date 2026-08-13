@@ -50,9 +50,9 @@ from services.file_service import (
 )
 
 
-# ===========================================================================
+# ============================================================================
 # ADMIN BLUEPRINT
-# ===========================================================================
+# ============================================================================
 
 admin_bp = Blueprint(
     "admin",
@@ -61,11 +61,11 @@ admin_bp = Blueprint(
 )
 
 
-# ===========================================================================
+# ============================================================================
 # HELPERS
-# ===========================================================================
+# ============================================================================
 
-def slugify(text: str) -> str:
+def slugify(text: str):
 
     text = text.lower().strip()
 
@@ -84,9 +84,9 @@ def slugify(text: str) -> str:
     return text or uuid.uuid4().hex[:8]
 
 
-# ===========================================================================
+# ============================================================================
 # ADMIN ACCESS
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.before_request
 @login_required
@@ -96,15 +96,14 @@ def _require_admin():
         abort(403)
 
 
-# ===========================================================================
+# ============================================================================
 # DASHBOARD
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route("/")
 def dashboard():
 
     stats = {
-
         "users": User.query.count(),
 
         "configs": Config.query.count(),
@@ -129,13 +128,16 @@ def dashboard():
     ).all()
 
     stats["total_revenue"] = sum(
-        float(order.amount)
+        float(order.amount or 0)
         for order in paid_orders
     )
 
-    recent_orders = Order.query.order_by(
-        Order.created_at.desc()
-    ).limit(8).all()
+    recent_orders = (
+        Order.query
+        .order_by(Order.created_at.desc())
+        .limit(8)
+        .all()
+    )
 
     return render_template(
         "admin/dashboard.html",
@@ -144,16 +146,18 @@ def dashboard():
     )
 
 
-# ===========================================================================
+# ============================================================================
 # CONFIGS
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route("/configs")
 def config_list():
 
-    configs = Config.query.order_by(
-        Config.created_at.desc()
-    ).all()
+    configs = (
+        Config.query
+        .order_by(Config.created_at.desc())
+        .all()
+    )
 
     return render_template(
         "admin/configs.html",
@@ -255,7 +259,6 @@ def config_new():
             )
 
             db.session.add(config)
-
             db.session.commit()
 
             flash(
@@ -394,7 +397,6 @@ def config_delete(config_id):
     )
 
     db.session.delete(config)
-
     db.session.commit()
 
     flash(
@@ -445,9 +447,9 @@ def config_toggle_active(config_id):
     )
 
 
-# ===========================================================================
+# ============================================================================
 # CATEGORIES
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route(
     "/categories",
@@ -480,7 +482,6 @@ def categories():
             )
 
             db.session.add(category)
-
             db.session.commit()
 
             flash(
@@ -521,7 +522,6 @@ def category_delete(cat_id):
     else:
 
         db.session.delete(cat)
-
         db.session.commit()
 
         flash(
@@ -534,9 +534,9 @@ def category_delete(cat_id):
     )
 
 
-# ===========================================================================
+# ============================================================================
 # USERS
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route("/users")
 def users():
@@ -559,9 +559,11 @@ def users():
             )
         )
 
-    all_users = query.order_by(
-        User.created_at.desc()
-    ).all()
+    all_users = (
+        query
+        .order_by(User.created_at.desc())
+        .all()
+    )
 
     return render_template(
         "admin/users.html",
@@ -569,10 +571,6 @@ def users():
         q=q
     )
 
-
-# ===========================================================================
-# USER DETAIL
-# ===========================================================================
 
 @admin_bp.route(
     "/users/<int:user_id>"
@@ -583,9 +581,11 @@ def user_detail(user_id):
         user_id
     )
 
-    orders = user.orders.order_by(
-        Order.created_at.desc()
-    ).all()
+    orders = (
+        user.orders
+        .order_by(Order.created_at.desc())
+        .all()
+    )
 
     return render_template(
         "admin/user_detail.html",
@@ -594,9 +594,9 @@ def user_detail(user_id):
     )
 
 
-# ===========================================================================
-# MAKE ADMIN
-# ===========================================================================
+# ============================================================================
+# ADMIN MANAGEMENT
+# ============================================================================
 
 @admin_bp.route(
     "/users/<int:user_id>/make-admin",
@@ -636,7 +636,6 @@ def make_admin(user_id):
     )
 
     db.session.add(admin)
-
     db.session.commit()
 
     flash(
@@ -648,10 +647,6 @@ def make_admin(user_id):
         url_for("admin.users")
     )
 
-
-# ===========================================================================
-# REMOVE ADMIN
-# ===========================================================================
 
 @admin_bp.route(
     "/users/<int:user_id>/remove-admin",
@@ -690,7 +685,6 @@ def remove_admin(user_id):
         )
 
     db.session.delete(admin)
-
     db.session.commit()
 
     flash(
@@ -702,10 +696,6 @@ def remove_admin(user_id):
         url_for("admin.users")
     )
 
-
-# ===========================================================================
-# MAKE SUPER ADMIN
-# ===========================================================================
 
 @admin_bp.route(
     "/users/<int:user_id>/make-super-admin",
@@ -757,10 +747,6 @@ def make_super_admin(user_id):
     )
 
 
-# ===========================================================================
-# REMOVE SUPER ADMIN
-# ===========================================================================
-
 @admin_bp.route(
     "/users/<int:user_id>/remove-super-admin",
     methods=["POST"]
@@ -811,9 +797,9 @@ def remove_super_admin(user_id):
     )
 
 
-# ===========================================================================
+# ============================================================================
 # BLOCK / UNBLOCK
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route(
     "/users/<int:user_id>/toggle-block",
@@ -859,9 +845,9 @@ def user_toggle_block(user_id):
     )
 
 
-# ===========================================================================
+# ============================================================================
 # ORDERS
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route("/orders")
 def order_list():
@@ -879,9 +865,11 @@ def order_list():
             status=status
         )
 
-    all_orders = query.order_by(
-        Order.created_at.desc()
-    ).all()
+    all_orders = (
+        query
+        .order_by(Order.created_at.desc())
+        .all()
+    )
 
     return render_template(
         "admin/orders.html",
@@ -894,9 +882,9 @@ def order_list():
     )
 
 
-# ===========================================================================
+# ============================================================================
 # PAYMENT RECEIPT
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route(
     "/payments/<int:order_id>/receipt"
@@ -934,18 +922,24 @@ def view_receipt(order_id):
     )
 
 
-# ===========================================================================
-# PAYMENTS
-# ===========================================================================
+# ============================================================================
+# PAYMENT REVIEW
+# ============================================================================
 
 @admin_bp.route("/payments")
 def payments():
 
-    pending = Order.query.filter_by(
-        status=OrderStatus.UNDER_REVIEW.value
-    ).order_by(
-        Order.created_at.asc()
-    ).all()
+    pending = (
+        Order.query
+        .filter(
+            Order.status ==
+            OrderStatus.UNDER_REVIEW.value
+        )
+        .order_by(
+            Order.created_at.asc()
+        )
+        .all()
+    )
 
     reject_form = RejectOrderForm()
 
@@ -955,6 +949,10 @@ def payments():
         reject_form=reject_form
     )
 
+
+# ============================================================================
+# APPROVE PAYMENT
+# ============================================================================
 
 @admin_bp.route(
     "/payments/<int:order_id>/approve",
@@ -966,6 +964,28 @@ def payment_approve(order_id):
         order_id
     )
 
+    # Faqat UNDER_REVIEW orderni tasdiqlash
+    if order.status != OrderStatus.UNDER_REVIEW.value:
+
+        if order.status == OrderStatus.PAID.value:
+
+            flash(
+                f"Order #{order.id} allaqachon tasdiqlangan.",
+                "info"
+            )
+
+        else:
+
+            flash(
+                "Bu order hozir to'lov tekshirish holatida emas.",
+                "warning"
+            )
+
+        return redirect(
+            url_for("admin.payments")
+        )
+
+    # Payment mavjudligi
     if not order.payment:
 
         flash(
@@ -977,20 +997,54 @@ def payment_approve(order_id):
             url_for("admin.payments")
         )
 
-    payment_service.approve_payment(
-        order.payment,
-        current_user.admin_profile.id
-    )
+    # Admin profile mavjudligi
+    if not current_user.admin_profile:
 
-    flash(
-        f"Order #{order.id} tasdiqlandi. Foydalanuvchi endi yuklab olishi mumkin.",
-        "success"
-    )
+        flash(
+            "Admin profilingiz topilmadi.",
+            "danger"
+        )
+
+        return redirect(
+            url_for("admin.payments")
+        )
+
+    try:
+
+        payment_service.approve_payment(
+            order.payment,
+            current_user.admin_profile.id
+        )
+
+        db.session.commit()
+
+        flash(
+            f"Order #{order.id} tasdiqlandi. "
+            f"Foydalanuvchi endi configni yuklab olishi mumkin.",
+            "success"
+        )
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        current_app.logger.exception(
+            "Payment approve error"
+        )
+
+        flash(
+            f"To'lovni tasdiqlashda xatolik: {str(e)}",
+            "danger"
+        )
 
     return redirect(
         url_for("admin.payments")
     )
 
+
+# ============================================================================
+# REJECT PAYMENT
+# ============================================================================
 
 @admin_bp.route(
     "/payments/<int:order_id>/reject",
@@ -1002,8 +1056,19 @@ def payment_reject(order_id):
         order_id
     )
 
-    form = RejectOrderForm()
+    # Faqat UNDER_REVIEW order
+    if order.status != OrderStatus.UNDER_REVIEW.value:
 
+        flash(
+            "Bu order hozir rad etish holatida emas.",
+            "warning"
+        )
+
+        return redirect(
+            url_for("admin.payments")
+        )
+
+    # Payment mavjudligi
     if not order.payment:
 
         flash(
@@ -1015,41 +1080,81 @@ def payment_reject(order_id):
             url_for("admin.payments")
         )
 
-    reason = (
-        form.reason.data
-        if form.validate_on_submit()
-        else request.form.get(
-            "reason",
-            ""
+    # Admin profile
+    if not current_user.admin_profile:
+
+        flash(
+            "Admin profilingiz topilmadi.",
+            "danger"
         )
-    )
 
-    payment_service.reject_payment(
-        order.payment,
-        current_user.admin_profile.id,
-        reason=reason
-    )
+        return redirect(
+            url_for("admin.payments")
+        )
 
-    flash(
-        f"Order #{order.id} rad etildi.",
-        "info"
-    )
+    form = RejectOrderForm()
+
+    if form.validate_on_submit():
+
+        reason = (
+            form.reason.data or ""
+        ).strip()
+
+    else:
+
+        reason = (
+            request.form.get(
+                "reason",
+                ""
+            )
+            .strip()
+        )
+
+    try:
+
+        payment_service.reject_payment(
+            order.payment,
+            current_user.admin_profile.id,
+            reason=reason
+        )
+
+        db.session.commit()
+
+        flash(
+            f"Order #{order.id} rad etildi.",
+            "info"
+        )
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        current_app.logger.exception(
+            "Payment reject error"
+        )
+
+        flash(
+            f"To'lovni rad etishda xatolik: {str(e)}",
+            "danger"
+        )
 
     return redirect(
         url_for("admin.payments")
     )
 
 
-# ===========================================================================
+# ============================================================================
 # REVIEWS
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route("/reviews")
 def reviews():
 
-    all_reviews = Review.query.order_by(
-        Review.created_at.desc()
-    ).all()
+    all_reviews = (
+        Review.query
+        .order_by(Review.created_at.desc())
+        .all()
+    )
 
     return render_template(
         "admin/reviews.html",
@@ -1068,7 +1173,6 @@ def review_delete(review_id):
     )
 
     db.session.delete(review)
-
     db.session.commit()
 
     flash(
@@ -1081,26 +1185,26 @@ def review_delete(review_id):
     )
 
 
-# ===========================================================================
+# ============================================================================
 # SUPPORT
-# ===========================================================================
+# ============================================================================
 
 @admin_bp.route("/support")
 def support():
 
-    messages = SupportMessage.query.order_by(
-        SupportMessage.created_at.desc()
-    ).all()
+    messages = (
+        SupportMessage.query
+        .order_by(
+            SupportMessage.created_at.desc()
+        )
+        .all()
+    )
 
     return render_template(
         "admin/support.html",
         messages=messages
     )
 
-
-# ---------------------------------------------------------------------------
-# SUPPORT REPLY
-# ---------------------------------------------------------------------------
 
 @admin_bp.route(
     "/support/<int:message_id>/reply",
@@ -1112,10 +1216,13 @@ def support_reply(message_id):
         message_id
     )
 
-    reply = request.form.get(
-        "reply",
-        ""
-    ).strip()
+    reply = (
+        request.form.get(
+            "reply",
+            ""
+        )
+        .strip()
+    )
 
     if not reply:
 
@@ -1150,10 +1257,6 @@ def support_reply(message_id):
     )
 
 
-# ---------------------------------------------------------------------------
-# SUPPORT DELETE
-# ---------------------------------------------------------------------------
-
 @admin_bp.route(
     "/support/<int:message_id>/delete",
     methods=["POST"]
@@ -1165,7 +1268,6 @@ def support_delete(message_id):
     )
 
     db.session.delete(message)
-
     db.session.commit()
 
     flash(
@@ -1178,9 +1280,9 @@ def support_delete(message_id):
     )
 
 
-# ===========================================================================
-# SETTINGS
-# ===========================================================================
+# ============================================================================
+# PAYMENT SETTINGS
+# ============================================================================
 
 @admin_bp.route(
     "/settings/payment",
@@ -1195,7 +1297,6 @@ def payment_settings():
         settings = PaymentSettings()
 
         db.session.add(settings)
-
         db.session.commit()
 
     form = PaymentSettingsForm(
@@ -1216,7 +1317,9 @@ def payment_settings():
         )
 
         return redirect(
-            url_for("admin.payment_settings")
+            url_for(
+                "admin.payment_settings"
+            )
         )
 
     return render_template(
@@ -1224,6 +1327,10 @@ def payment_settings():
         form=form
     )
 
+
+# ============================================================================
+# SITE SETTINGS
+# ============================================================================
 
 @admin_bp.route(
     "/settings/site",
@@ -1238,7 +1345,6 @@ def site_settings():
         settings = SiteSettings()
 
         db.session.add(settings)
-
         db.session.commit()
 
     form = SiteSettingsForm(
@@ -1259,7 +1365,9 @@ def site_settings():
         )
 
         return redirect(
-            url_for("admin.site_settings")
+            url_for(
+                "admin.site_settings"
+            )
         )
 
     return render_template(
