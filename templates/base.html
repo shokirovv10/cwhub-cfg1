@@ -57,7 +57,12 @@
           Biz haqda
         </a>
 
-        <a href="{{ url_for('main.support') }}">
+        <!-- TELEGRAM SUPPORT -->
+        <a
+          href="https://t.me/shokirjonshokirov"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           Support
         </a>
 
@@ -72,12 +77,14 @@
           </a>
 
           {% if current_user.is_admin %}
+
             <a
               href="{{ url_for('admin.dashboard') }}"
               class="accent"
             >
               Admin Panel
             </a>
+
           {% endif %}
 
           <a href="{{ url_for('auth.logout') }}">
@@ -148,25 +155,16 @@
 
       <div class="footer-links">
 
-        {% if site_settings and site_settings.telegram_url %}
+        <!-- TELEGRAM -->
+        <a
+          href="https://t.me/shokirjonshokirov"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Telegram
+        </a>
 
-          <a
-            href="{{ site_settings.telegram_url }}"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Telegram
-          </a>
-
-        {% else %}
-
-          <a href="#">
-            Telegram
-          </a>
-
-        {% endif %}
-
-
+        <!-- CONTACT EMAIL -->
         {% if site_settings and site_settings.contact_email %}
 
           <a
@@ -182,7 +180,6 @@
           </a>
 
         {% endif %}
-
 
         <a href="#">
           Terms
