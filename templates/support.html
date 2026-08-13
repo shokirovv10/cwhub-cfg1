@@ -68,6 +68,10 @@
             color: white;
             cursor: pointer;
         }
+
+        button:hover {
+            background: #1d4ed8;
+        }
     </style>
 </head>
 
@@ -112,6 +116,8 @@
     </div>
 
     <form method="POST">
+
+        {{ csrf_token() }}
 
         <textarea
             name="message"
